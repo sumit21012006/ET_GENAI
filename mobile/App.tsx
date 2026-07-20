@@ -15,20 +15,33 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { 
-  ShieldAlert, 
-  Phone, 
-  PhoneOff, 
-  MessageSquare, 
-  Camera, 
-  CheckCircle, 
-  AlertTriangle, 
-  User, 
-  Send, 
-  Upload,
-  Info,
-  Zap 
+  ShieldAlert as LucideShieldAlert, 
+  Phone as LucidePhone, 
+  PhoneOff as LucidePhoneOff, 
+  MessageSquare as LucideMessageSquare, 
+  Camera as LucideCamera, 
+  CheckCircle as LucideCheckCircle, 
+  AlertTriangle as LucideAlertTriangle, 
+  User as LucideUser, 
+  Send as LucideSend, 
+  Upload as LucideUpload,
+  Info as LucideInfo,
+  Zap as LucideZap 
 } from 'lucide-react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+
+const ShieldAlert = LucideShieldAlert as any;
+const Phone = LucidePhone as any;
+const PhoneOff = LucidePhoneOff as any;
+const MessageSquare = LucideMessageSquare as any;
+const Camera = LucideCamera as any;
+const CheckCircle = LucideCheckCircle as any;
+const AlertTriangle = LucideAlertTriangle as any;
+const User = LucideUser as any;
+const Send = LucideSend as any;
+const Upload = LucideUpload as any;
+const Info = LucideInfo as any;
+const Zap = LucideZap as any;
 
 const { width } = Dimensions.get('window');
 
