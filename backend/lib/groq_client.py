@@ -1,0 +1,84 @@
+from groq import Groq
+from lib.config import GROQ_API_KEY
+
+_client: Groq | None = None
+
+def get_groq() -> Groq:
+    global _client
+    if _client is None:
+        _client = Groq(api_key=GROQ_API_KEY)
+    return _client
+
+
+def transcribe_audio(audio_bytes: bytes, filename: str = "audio.wav") -> str:
+    """Send raw audio bytes to Groq Whisper, return transcript string."""
+    client = get_groq()
+    transcription = client.audio.transcriptions.create(
+        file=(filename, audio_bytes),
+        model="whisper-large-v3",
+        response_format="text",
+        language="en",
+    )
+    return str(transcription)
+
+
+SCAM_EVAL_SYSTEM_PROMPT = """You are RakshaNet, an AI system that detects Indian digital fraud during phone calls.
+
+Known Indian scam playbooks you must recognize:
+1. Digital Arrest Scam: Impersonates CBI/Customs/Police, claims victim is "under digital arrest" via video call, demands money to clear false charges.
+2. Customs Package Scam: Claims a seized package with drugs/illegal items was sent under victim's Aadhaar, demands "security deposit" to RBI hold account.
+3. Electricity Disconnection: Threatens immediate power cut, asks victim to install screen-share app (AnyDesk/TeamViewer/QuickSupport).
+4. Bank KYC Fraud: Pretends to be bank official, urgently demands OTP/UPI PIN to "verify KYC".
+5. QR Code Scam: Sends QR code claiming it gives money "refund", actually initiates outgoing payment.
+6. Investment Fraud (Pig Butchering): Promises high returns on fake trading apps.
+
+Analyze the given transcript and return ONLY a valid JSON object with this exact structure:
+{
+  "threat_score": <integer 0-100>,
+  "matched_patterns": [<list of matched scam pattern names as strings>],
+  "reasoning": "<brief 2-3 sentence explanation of why this score was assigned>",
+  "recommended_action": "<one of: SAFE | MONITOR | WARN_USER | DISCONNECT_IMMEDIATELY | BLOCK>"
+}
+
+Scoring guide:
+- 0-30: No scam indicators (SAFE or MONITOR)
+- 31-60: Some suspicious elements (WARN_USER)
+- 61-85: Strong scam signals (DISCONNECT_IMMEDIATELY)
+- 86-100: Definitive scam script match (BLOCK)
+
+Return ONLY the JSON. No markdown fences, no explanation outside JSON."""
+
+
+def evaluate_transcript(transcript: str) -> dict:
+    """Send transcript to Groq Llama 3 for scam evaluation. Returns structured dict."""
+    client = get_groq()
+
+    for attempt in range(3):
+        try:
+            response = client.chat.completions.create(
+                model="llama-3.1-8b-instant",
+                messages=[
+                    {"role": "system", "content": SCAM_EVAL_SYSTEM_PROMPT},
+                    {"role": "user", "content": f"Evaluate this call transcript:\n\n{transcript}"},
+                ],
+                temperature=0.1,
+                max_tokens=512,
+            )
+            raw = response.choices[0].message.content or ""
+            # Strip any accidental markdown fences
+            raw = raw.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+            import json
+            result = json.loads(raw)
+            # Validate required fields
+            assert "threat_score" in result and "matched_patterns" in result
+            result["threat_score"] = max(0, min(100, int(result["threat_score"])))
+            return result
+        except Exception as e:
+            if attempt == 2:
+                # Fallback: return a safe default on total failure
+                return {
+                    "threat_score": 0,
+                    "matched_patterns": [],
+                    "reasoning": f"LLM evaluation failed after 3 attempts: {str(e)}",
+                    "recommended_action": "MONITOR",
+                }
