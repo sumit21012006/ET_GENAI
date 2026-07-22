@@ -313,16 +313,32 @@ export default function App() {
               pitch: 1.0,
               onDone: () => {
                 setIsSpeaking(false);
-                setIsWaitingForUser(true);
+                if (data.threat_score >= 88) {
+                  setTimeout(() => {
+                    if (dialogueTimerRef.current) clearInterval(dialogueTimerRef.current);
+                    setCallState('hangup');
+                    Vibration.vibrate([200, 400, 200, 400, 600]);
+                  }, 1200);
+                } else {
+                  setIsWaitingForUser(true);
+                }
               },
               onError: () => {
                 setIsSpeaking(false);
-                setIsWaitingForUser(true);
+                if (data.threat_score >= 88) {
+                  setCallState('hangup');
+                } else {
+                  setIsWaitingForUser(true);
+                }
               }
             });
           } catch {
             setIsSpeaking(false);
-            setIsWaitingForUser(true);
+            if (data.threat_score >= 88) {
+              setCallState('hangup');
+            } else {
+              setIsWaitingForUser(true);
+            }
           }
           return;
         }
@@ -418,7 +434,7 @@ export default function App() {
     try {
       Speech.stop();
     } catch {}
-    clearInterval(dialogueTimerRef.current);
+    if (dialogueTimerRef.current) clearInterval(dialogueTimerRef.current);
     setCallState('verdict');
   };
 
