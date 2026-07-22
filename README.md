@@ -30,14 +30,14 @@ flowchart TD
         DB_Supabase["Supabase DB (Persisted Threat Alerts)"]
     end
 
-    UI_Call -->|Transcript / Turn Speech| Router_Eval
-    UI_WA -->|Image / Screenshot| Router_OCR
-    UI_CV -->|Banknote ROI Snapshot| Router_CV
+    UI_Call -->|"Transcript / Turn Speech"| Router_Eval
+    UI_WA -->|"Image / Screenshot"| Router_OCR
+    UI_CV -->|"Banknote ROI Snapshot"| Router_CV
 
-    Router_Eval -->|Prompt Evaluation| Groq_LLaMA
-    Router_OCR -->|OCR Extraction + LLM Scoring| Groq_LLaMA
-    Router_Eval -->|Persist High Threat (>65)| DB_Supabase
-    Router_Graph -->|Query Mule Nodes & DFS Cycles| DB_Supabase
+    Router_Eval -->|"Prompt Evaluation"| Groq_LLaMA
+    Router_OCR -->|"OCR Extraction + LLM Scoring"| Groq_LLaMA
+    Router_Eval -->|"Persist High Threat Alerts"| DB_Supabase
+    Router_Graph -->|"Query Mule Nodes & DFS Cycles"| DB_Supabase
 ```
 
 ---
