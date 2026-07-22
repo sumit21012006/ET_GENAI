@@ -128,6 +128,14 @@ flowchart TD
 
 ---
 
+## 📱 Mobile App Screen Previews
+
+Here is a preview of the citizen-facing interface screens showing real-time call screening, WhatsApp safety chatbot checks, and currency verification logic:
+
+![Mobile App Screens](./assets/mobile_app_screens_1784739264424.png)
+
+---
+
 ## 📁 Repository Structure
 
 ```
@@ -233,6 +241,35 @@ npm install
 npm start
 ```
 Scan the QR code using **Expo Go** on Android/iOS or run on an emulator.
+
+---
+
+## 🔌 Backend API Reference
+
+**Base URL:** `http://localhost:8000`
+
+| Method | Route | Description | Authentication |
+|--------|-------|-------------|----------------|
+| `GET`  | `/health` | Check Supabase + Groq connectivity and service health | None |
+| `GET`  | `/` | List all endpoints and version metadata | None |
+| `POST` | `/transcribe` | Audio file ➔ Whisper transcript string | None |
+| `POST` | `/evaluate-script` | Text transcript ➔ Scam threat evaluation JSON | None |
+| `POST` | `/process-call-chunk` | Combined endpoint: transcribe audio + run LLM threat check | None |
+| `POST` | `/ocr-screenshot` | Upload image screenshot ➔ OCR text ➔ Scam verdict | None |
+| `GET`  | `/fraud-graph` | Fetch all mule nodes, transactions, and DFS cycle rings | None |
+| `POST` | `/banknote` | Image upload ➔ Counterfeit computer vision validation | None |
+
+---
+
+## 🗄️ Database Schema (Supabase)
+
+The platform utilizes three primary tables in Supabase (PostgreSQL) with Realtime replication enabled:
+
+| Table Name | Primary Columns | Purpose |
+|------------|-----------------|---------|
+| **`alerts`** | `id`, `call_id`, `threat_score`, `matched_patterns`, `reasoning`, `recommended_action`, `created_at` | Persists high-threat scam instances (score > 65) for Admin Dashboard notifications. |
+| **`mule_accounts`** | `id`, `account_number_hash`, `risk_score`, `bank`, `location` | Known or flagged bank accounts used in laundering. |
+| **`transactions`** | `id`, `from_account`, `to_account`, `amount`, `is_flagged`, `ts` | Record of transfers between mule accounts analyzed by DFS. |
 
 ---
 
