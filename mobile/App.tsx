@@ -68,9 +68,9 @@ const getEndpoints = (path: string) => API_HOSTS.map(host => `${host}${path}`);
 // Mock Call scenarios matching the main script
 const CALL_SCENARIOS = [
   {
-    name: 'CBI / Customs Drug Scam',
+    name: 'CBI / Customs Digital Arrest',
     number: '+91 98450 12093',
-    risk: 'CRITICAL THREAT (94%)',
+    risk: 'CRITICAL THREAT (Digital Arrest)',
     dialogue: [
       { speaker: 'scammer', text: 'Hello, this is Inspector Rahul Sharma from the Delhi Customs Cyber Cell.' },
       { speaker: 'user', text: 'Yes, hello? What is this about?' },
@@ -80,6 +80,27 @@ const CALL_SCENARIOS = [
       { speaker: 'user', text: 'But I am innocent, please help me.' },
       { speaker: 'scammer', text: 'To verify your bank accounts are not laundering drug money, you must transfer a security deposit of ₹3,50,000 to our verified RBI hold account right now.' },
       { speaker: 'scammer', text: 'If you fail to do so, we will dispatch local police to arrest you and freeze all assets immediately.' }
+    ]
+  },
+  {
+    name: 'Electricity Disconnection Scam',
+    number: '+91 88120 44921',
+    risk: 'HIGH RISK (Utility Disconnection)',
+    dialogue: [
+      { speaker: 'scammer', text: 'Attention Consumer: Your electricity connection will be disconnected tonight at 9:30 PM due to pending bill.' },
+      { speaker: 'user', text: 'I paid my bill yesterday! Why is it disconnected?' },
+      { speaker: 'scammer', text: 'Your payment failed on server. Download AnyDesk app immediately and share 9-digit code with our billing officer.' },
+      { speaker: 'scammer', text: 'Pay ₹10 token update fee now or power team will pull your connection.' }
+    ]
+  },
+  {
+    name: 'Bank KYC & OTP Fraud',
+    number: '+91 91203 77481',
+    risk: 'HIGH RISK (Banking Fraud)',
+    dialogue: [
+      { speaker: 'scammer', text: 'This is HDFC Card Security Desk. Your debit card has been blocked due to unverified KYC.' },
+      { speaker: 'user', text: 'Oh no, how do I unblock it?' },
+      { speaker: 'scammer', text: 'We sent a 6-digit OTP to your phone. Share the OTP and UPI PIN to complete unblocking.' }
     ]
   }
 ];
@@ -105,6 +126,8 @@ export default function App() {
 
   // Call Screening State
   const [callState, setCallState] = useState<'idle' | 'incoming' | 'active' | 'hangup' | 'verdict'>('idle');
+  const [selectedScenarioIndex, setSelectedScenarioIndex] = useState(0);
+  const [liveCallerText, setLiveCallerText] = useState('');
   const [scamScore, setScamScore] = useState(0);
   const [callTranscript, setCallTranscript] = useState<{ speaker: 'scammer' | 'user'; text: string }[]>([]);
   const [detectedIndicators, setDetectedIndicators] = useState<string[]>([]);
@@ -170,10 +193,7 @@ export default function App() {
 
   // Evaluate text for digital arrest patterns via Groq API backend (with local fallback)
   const checkScamContent = async (text: string) => {
-    const endpoints = [
-      'http://localhost:8000/evaluate-script',
-      'http://10.177.188.26:8000/evaluate-script'
-    ];
+    const endpoints = getEndpoints('/evaluate-script');
 
     for (const ep of endpoints) {
       try {
@@ -236,6 +256,14 @@ export default function App() {
     }
   };
 
+  const sendLiveCallerLine = () => {
+    if (!liveCallerText.trim()) return;
+    const lineText = liveCallerText.trim();
+    setCallTranscript(prev => [...prev, { speaker: 'scammer', text: lineText }]);
+    setLiveCallerText('');
+    checkScamContent(lineText);
+  };
+
   // Call controls
   const handleIncomingCall = () => {
     setCallState('incoming');
@@ -249,7 +277,7 @@ export default function App() {
     setCallState('active');
 
     let step = 0;
-    const scenario = CALL_SCENARIOS[0];
+    const scenario = CALL_SCENARIOS[selectedScenarioIndex] || CALL_SCENARIOS[0];
 
     dialogueTimerRef.current = setInterval(() => {
       if (step < scenario.dialogue.length) {
@@ -263,7 +291,7 @@ export default function App() {
       } else {
         clearInterval(dialogueTimerRef.current);
       }
-    }, 4000);
+    }, 2500);
   };
 
   // Auto-hangup checker
@@ -621,14 +649,32 @@ export default function App() {
           <ScrollView contentContainerStyle={styles.scrollContainer}>
             {callState === 'idle' && (
               <View style={styles.card}>
-                <View style={{ alignItems: 'center', marginBottom: 20 }}>
+                <View style={{ alignItems: 'center', marginBottom: 15 }}>
                   <Phone size={48} color="#a855f7" />
-                  <Text style={styles.cardTitle}>Real-Time Call Screening</Text>
-                  <Text style={styles.cardSubText}>Flags VoIP spoofing and scam script patterns</Text>
+                  <Text style={styles.cardTitle}>Real-Time Call Screening Agent</Text>
+                  <Text style={styles.cardSubText}>Live Groq AI threat analysis for incoming calls</Text>
+                </View>
+
+                <Text style={styles.reportHeader}>SELECT CALL SCENARIO TO TEST:</Text>
+                <View style={{ marginBottom: 15 }}>
+                  {CALL_SCENARIOS.map((sc, idx) => (
+                    <TouchableOpacity 
+                      key={idx} 
+                      style={[
+                        styles.scenarioSelectBtn, 
+                        selectedScenarioIndex === idx && styles.scenarioSelectBtnActive
+                      ]}
+                      onPress={() => setSelectedScenarioIndex(idx)}
+                    >
+                      <Text style={[styles.scenarioSelectText, selectedScenarioIndex === idx && { color: 'white', fontWeight: 'bold' }]}>
+                        {selectedScenarioIndex === idx ? '🔘 ' : '⚪ '} {sc.name}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
                 </View>
 
                 <TouchableOpacity style={styles.primaryBtn} onPress={handleIncomingCall}>
-                  <Text style={styles.btnText}>Trigger Incoming Call Mock</Text>
+                  <Text style={styles.btnText}>Trigger Incoming Call ({CALL_SCENARIOS[selectedScenarioIndex].name})</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -639,9 +685,9 @@ export default function App() {
                   <View style={styles.avatarGlow}>
                     <User size={48} color="white" />
                   </View>
-                  <Text style={styles.incomingNumber}>{CALL_SCENARIOS[0].number}</Text>
-                  <Text style={styles.alertText}>{CALL_SCENARIOS[0].risk}</Text>
-                  <Text style={styles.alertLabel}>Matched to Delhi Customs Digital Arrest campaign</Text>
+                  <Text style={styles.incomingNumber}>{CALL_SCENARIOS[selectedScenarioIndex].number}</Text>
+                  <Text style={styles.alertText}>{CALL_SCENARIOS[selectedScenarioIndex].risk}</Text>
+                  <Text style={styles.alertLabel}>{CALL_SCENARIOS[selectedScenarioIndex].name}</Text>
                 </View>
 
                 <View style={styles.callButtonContainer}>
@@ -658,9 +704,9 @@ export default function App() {
             {callState === 'active' && (
               <View style={styles.card}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
-                  <Text style={styles.activeNumber}>{CALL_SCENARIOS[0].number}</Text>
+                  <Text style={styles.activeNumber}>{CALL_SCENARIOS[selectedScenarioIndex].number}</Text>
                   <Text style={[styles.dangerPill, { color: scamScore >= 50 ? '#f87171' : '#a855f7' }]}>
-                    Scam Probability: {scamScore}%
+                    Threat Index: {scamScore}%
                   </Text>
                 </View>
 
@@ -673,9 +719,23 @@ export default function App() {
                   ))}
                 </ScrollView>
 
-                <TouchableOpacity style={[styles.primaryBtn, styles.declineBtn, { marginTop: 15 }]} onPress={disconnectCall}>
+                {/* Live Speech Simulation Input Bar */}
+                <View style={styles.liveCallerBox}>
+                  <TextInput 
+                    style={styles.liveCallerInput}
+                    placeholder="Simulate caller speech live to test Groq AI..."
+                    placeholderTextColor="#6b7280"
+                    value={liveCallerText}
+                    onChangeText={setLiveCallerText}
+                  />
+                  <TouchableOpacity style={styles.sendCallerBtn} onPress={sendLiveCallerLine}>
+                    <Send size={16} color="white" />
+                  </TouchableOpacity>
+                </View>
+
+                <TouchableOpacity style={[styles.primaryBtn, styles.declineBtn, { marginTop: 12 }]} onPress={disconnectCall}>
                   <PhoneOff size={20} color="white" style={{ marginRight: 8 }} />
-                  <Text style={styles.btnText}>Disconnect Call</Text>
+                  <Text style={styles.btnText}>Disconnect Call Intercept</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -1239,6 +1299,47 @@ const styles = StyleSheet.create({
     backgroundColor: '#00a884',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  scenarioSelectBtn: {
+    backgroundColor: '#1f2937',
+    padding: 10,
+    borderRadius: 8,
+    marginVertical: 4,
+    borderWidth: 1,
+    borderColor: '#374151',
+  },
+  scenarioSelectBtnActive: {
+    backgroundColor: 'rgba(168, 85, 247, 0.2)',
+    borderColor: '#a855f7',
+  },
+  scenarioSelectText: {
+    color: '#9ca3af',
+    fontSize: 13,
+  },
+  liveCallerBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  liveCallerInput: {
+    flex: 1,
+    backgroundColor: '#1f2937',
+    color: 'white',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 13,
+    borderWidth: 1,
+    borderColor: '#374151',
+  },
+  sendCallerBtn: {
+    backgroundColor: '#a855f7',
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
   },
   cameraFrame: {
     width: '100%',
