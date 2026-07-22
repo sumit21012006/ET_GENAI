@@ -57,6 +57,14 @@ const ShieldCheck = LucideShieldCheck as any;
 
 const { width } = Dimensions.get('window');
 
+const API_HOSTS = [
+  'http://10.177.188.173:8000',
+  'http://10.177.188.26:8000',
+  'http://localhost:8000',
+  'http://127.0.0.1:8000'
+];
+const getEndpoints = (path: string) => API_HOSTS.map(host => `${host}${path}`);
+
 // Mock Call scenarios matching the main script
 const CALL_SCENARIOS = [
   {
@@ -122,7 +130,7 @@ export default function App() {
 
   // Fetch Fraud Graph data for Admin view
   const fetchFraudGraph = async () => {
-    const endpoints = ['http://localhost:8000/fraud-graph', 'http://10.177.188.26:8000/fraud-graph'];
+    const endpoints = getEndpoints('/fraud-graph');
     for (const ep of endpoints) {
       try {
         const res = await fetch(ep);
@@ -140,7 +148,7 @@ export default function App() {
   // Check Groq + FastAPI connection on mount
   useEffect(() => {
     const checkBackend = async () => {
-      const endpoints = ['http://localhost:8000/health', 'http://10.177.188.26:8000/health'];
+      const endpoints = getEndpoints('/health');
       for (const ep of endpoints) {
         try {
           const res = await fetch(ep);
@@ -289,10 +297,7 @@ export default function App() {
     }
 
     let botResponse = '';
-    const endpoints = [
-      'http://localhost:8000/evaluate-script',
-      'http://10.177.188.26:8000/evaluate-script'
-    ];
+    const endpoints = getEndpoints('/evaluate-script');
 
     let apiSuccess = false;
     for (const ep of endpoints) {
@@ -365,10 +370,7 @@ export default function App() {
         type: asset.mimeType || 'image/png',
       } as any);
 
-      const endpoints = [
-        'http://localhost:8000/ocr-screenshot',
-        'http://10.177.188.26:8000/ocr-screenshot'
-      ];
+      const endpoints = getEndpoints('/ocr-screenshot');
 
       let apiSuccess = false;
       for (const ep of endpoints) {
@@ -437,24 +439,45 @@ export default function App() {
     ]);
 
     try {
-      let b64Image: string | null = null;
-      if (cameraRef.current) {
-        const photo = await cameraRef.current.takePictureAsync({ base64: true, quality: 0.5 });
-        b64Image = photo?.base64 || null;
+      if (!cameraRef.current) {
+        throw new Error('Camera ref not ready');
       }
 
-      const endpoints = [
-        'http://localhost:8000/cv-banknote-scan',
-        'http://10.177.188.26:8000/cv-banknote-scan'
-      ];
+      const photo = await cameraRef.current.takePictureAsync({ base64: true, quality: 0.6 });
+
+      const formData = new FormData();
+      if (photo.uri) {
+        formData.append('image', {
+          uri: photo.uri,
+          name: 'banknote_scan.jpg',
+          type: 'image/jpeg',
+        } as any);
+      }
+      if (photo.base64) {
+        formData.append('base64', photo.base64);
+      }
+
+      const endpoints = getEndpoints('/cv-banknote-scan');
 
       for (const ep of endpoints) {
         try {
-          const res = await fetch(ep, {
+          // 1. Try sending multipart FormData first
+          let res = await fetch(ep, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ base64: b64Image || '' })
+            body: formData,
+            headers: {
+              'Accept': 'application/json',
+            },
           });
+
+          // 2. Fallback to JSON base64 body if needed
+          if (!res.ok && photo.base64) {
+            res = await fetch(ep, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ base64: photo.base64 })
+            });
+          }
 
           if (res.ok) {
             const data = await res.json();
@@ -479,6 +502,7 @@ export default function App() {
       ]);
       setNoteVerdict('⚠️ Counterfeit Warning: Image failed currency security feature verification (Low CV Confidence)');
     } catch (e: any) {
+      console.error('Banknote scan error:', e);
       setCvFeatures([
         { name: 'Watermark Edge Contrast', status: 'fail' },
         { name: 'Security Thread Shift', status: 'fail' },
@@ -513,10 +537,7 @@ export default function App() {
     setExportScanning(true);
     setExportVerdict(null);
 
-    const endpoints = [
-      'http://localhost:8000/evaluate-script',
-      'http://10.177.188.26:8000/evaluate-script'
-    ];
+    const endpoints = getEndpoints('/evaluate-script');
 
     for (const ep of endpoints) {
       try {
