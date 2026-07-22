@@ -402,9 +402,9 @@ export default function App() {
     }
   };
 
-  // Auto-hangup checker (triggers only on critical threat after multiple turns)
+  // Auto-hangup checker (triggers when threat score >= 88 and at least 3 messages exist)
   useEffect(() => {
-    if (scamScore >= 92 && callTranscript.length >= 5 && callState === 'active') {
+    if (scamScore >= 88 && callTranscript.length >= 3 && callState === 'active') {
       try {
         Speech.stop();
       } catch {}
