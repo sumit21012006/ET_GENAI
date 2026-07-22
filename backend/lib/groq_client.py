@@ -85,25 +85,29 @@ def evaluate_transcript(transcript: str) -> dict:
 
 
 def simulate_scammer_turn(history_text: str, user_message: str, scenario_type: str = "Digital Arrest") -> dict:
-    """Generate dynamic AI scammer line + evaluate threat score live using Groq LLaMA 3.1."""
+    """Generate aggressive AI scammer line + evaluate threat score live using Groq LLaMA 3.1."""
     client = get_groq()
     
-    prompt = f"""You are roleplaying as an Indian cyber scammer in a real-time call simulation for a fraud protection app demo.
+    prompt = f"""You are roleplaying as an aggressive Indian cyber fraud scammer in a real-time call simulation for a safety app demo.
 Scenario persona: {scenario_type}
 Conversation history so far:
 {history_text}
 
 Latest Victim Reply: "{user_message}"
 
-Instruction:
-1. Respond directly to the victim's reply in 1-2 realistic, intimidating spoken sentences as the scammer.
-2. Calculate the overall scam threat score (0-100%).
+CRITICAL INSTRUCTIONS:
+1. Generate the scammer's NEXT 1-2 spoken sentences. You MUST AGGRESSIVELY ESCALATE THE SCAM:
+   - For Digital Arrest: Inform victim they are under digital arrest for 50g MDMA drugs seized under Aadhaar. Demand immediate ₹3,50,000 security deposit transfer to RBI hold account right now or police raid!
+   - For Electricity Disconnection: Threaten immediate power cut in 30 minutes, demand installing AnyDesk/QuickSupport or paying Rs 10 token.
+   - For Bank KYC: Claim debit card blocked immediately, demand OTP and 4-digit UPI PIN right now.
+2. Ensure the response uses classic scam coercion keywords: "digital arrest", "RBI hold account", "MDMA drugs", "police raid", "OTP", "security deposit".
+3. Calculate threat score: escalate to 90-98% if scammer demands money, deposit, or OTP.
 
 Return ONLY a valid JSON object:
 {{
-  "next_scammer_line": "<1-2 realistic spoken sentences by scammer>",
-  "threat_score": <integer 0-100>,
-  "matched_patterns": ["{scenario_type}"]
+  "next_scammer_line": "<1-2 aggressive intimidating spoken sentences by scammer demanding money/OTP>",
+  "threat_score": <integer 90-98>,
+  "matched_patterns": ["{scenario_type}", "Coerced Transaction Request", "Digital Arrest Threat"]
 }}
 """
     try:
@@ -119,11 +123,11 @@ Return ONLY a valid JSON object:
         raw = raw.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
         import json
         res = json.loads(raw)
-        res["threat_score"] = max(0, min(100, int(res.get("threat_score", 75))))
+        res["threat_score"] = max(0, min(100, int(res.get("threat_score", 94))))
         return res
     except Exception as e:
         return {
-            "next_scammer_line": "This is a mandatory cyber investigation. You must comply immediately or face local police arrest.",
-            "threat_score": 85,
-            "matched_patterns": [scenario_type]
+            "next_scammer_line": "You are under digital arrest for MDMA drug package seized under your Aadhaar! Transfer ₹3,50,000 security deposit to RBI hold account immediately or local police will arrest you in 15 minutes!",
+            "threat_score": 95,
+            "matched_patterns": [scenario_type, "Digital Arrest Threat", "Coerced Transaction Request"]
         }
