@@ -31,3 +31,6 @@ backend/**/__pycache__/
 backend/**/*.pyc
 backend/test_api.py
 *.pyc
+
+# Large PDF docs
+RakshaNet_Documentation.pdf
