@@ -402,17 +402,17 @@ export default function App() {
     }
   };
 
-  // Auto-hangup checker
+  // Auto-hangup checker (triggers only on critical threat after multiple turns)
   useEffect(() => {
-    if (scamScore >= 80 && callState === 'active') {
+    if (scamScore >= 92 && callTranscript.length >= 5 && callState === 'active') {
       try {
         Speech.stop();
       } catch {}
-      clearInterval(dialogueTimerRef.current);
+      if (dialogueTimerRef.current) clearInterval(dialogueTimerRef.current);
       setCallState('hangup');
       Vibration.vibrate([200, 400, 200, 400, 600]);
     }
-  }, [scamScore, callState]);
+  }, [scamScore, callTranscript.length, callState]);
 
   const disconnectCall = () => {
     try {
