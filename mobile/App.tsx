@@ -332,17 +332,85 @@ export default function App() {
     setWaMessages(prev => [...prev, { sender: 'bot', text: botResponse, time: timeString }]);
   };
 
-  const runMockWhatsAppScan = () => {
-    setIsUploading(true);
-    setTimeout(() => {
-      setIsUploading(false);
+  const handleUploadWhatsAppImage = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['image/*', 'text/plain', '*/*'],
+        copyToCacheDirectory: true,
+      });
+
+      if (result.canceled || !result.assets || result.assets.length === 0) {
+        return;
+      }
+
+      const asset = result.assets[0];
       const timeString = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      setIsUploading(true);
+
       setWaMessages(prev => [
         ...prev,
-        { sender: 'user', text: '📷 [Uploaded chat_screenshot.png]', time: timeString },
-        { sender: 'bot', text: '🔎 SCREENSHOT EVALUATED (OCR):\n"Delhi Cyber police warrant issued. Pay ₹45,000 security deposit to clear."\n\n🚨 Threat Index: 96% (High Confidence Scam).', time: timeString }
+        { sender: 'user', text: `📷 [Uploaded File: ${asset.name}]`, time: timeString }
       ]);
-    }, 1500);
+
+      const formData = new FormData();
+      formData.append('image', {
+        uri: asset.uri,
+        name: asset.name || 'screenshot.png',
+        type: asset.mimeType || 'image/png',
+      } as any);
+
+      const endpoints = [
+        'http://localhost:8000/ocr-screenshot',
+        'http://10.177.188.26:8000/ocr-screenshot'
+      ];
+
+      let apiSuccess = false;
+      for (const ep of endpoints) {
+        try {
+          const res = await fetch(ep, {
+            method: 'POST',
+            body: formData,
+            headers: {
+              'Accept': 'application/json',
+            },
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            apiSuccess = true;
+            setIsUploading(false);
+
+            let botMsg = '';
+            if (!data.extracted_text || !data.extracted_text.trim()) {
+              botMsg = '🔎 SCREENSHOT EVALUATION (OCR):\nNo readable text could be extracted from this image. Please ensure the screenshot is clear.';
+            } else if (data.threat_score > 40) {
+              botMsg = `🚨 OCR SCREENSHOT AUDIT (${data.threat_score}% Threat)\n\n"Extracted Text: ${data.extracted_text.trim().substring(0, 150)}..."\n\n📌 Matched Playbooks: ${data.matched_patterns?.join(', ') || 'Suspicious Activity'}\n💡 Reasoning: ${data.reasoning}\n🛡️ Action: ${data.recommended_action}`;
+            } else {
+              botMsg = `🤖 OCR SCREENSHOT AUDIT (Safe - ${data.threat_score}% Threat)\n\n"Extracted Text: ${data.extracted_text.trim().substring(0, 150)}..."\n\n${data.reasoning || 'No active fraud templates detected in screenshot text.'}`;
+            }
+
+            setWaMessages(prev => [...prev, { sender: 'bot', text: botMsg, time: timeString }]);
+            return;
+          }
+        } catch (e) {
+          // try next endpoint
+        }
+      }
+
+      setIsUploading(false);
+      setWaMessages(prev => [
+        ...prev,
+        { 
+          sender: 'bot', 
+          text: `📋 File "${asset.name}" received. (Backend OCR service currently offline. Ensure Python server is running on port 8000).`, 
+          time: timeString 
+        }
+      ]);
+
+    } catch (err) {
+      setIsUploading(false);
+      console.error('Upload Error:', err);
+    }
   };
 
   // CV Note scanner action using real camera snapshot & backend CV API
@@ -645,7 +713,7 @@ export default function App() {
             </ScrollView>
 
             <View style={styles.chatInputContainer}>
-              <TouchableOpacity style={styles.attachBtn} onPress={runMockWhatsAppScan} disabled={isUploading}>
+              <TouchableOpacity style={styles.attachBtn} onPress={handleUploadWhatsAppImage} disabled={isUploading}>
                 {isUploading ? (
                   <ActivityIndicator size="small" color="#a855f7" />
                 ) : (
