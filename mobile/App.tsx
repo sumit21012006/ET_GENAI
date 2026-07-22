@@ -90,8 +90,33 @@ export default function App() {
   ]);
   const [noteVerdict, setNoteVerdict] = useState<string | null>(null);
 
-  // Evaluate text for digital arrest patterns
-  const checkScamContent = (text: string) => {
+  // Evaluate text for digital arrest patterns via Groq API backend (with local fallback)
+  const checkScamContent = async (text: string) => {
+    try {
+      const response = await fetch('http://localhost:8000/evaluate-script', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transcript: text })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.threat_score !== undefined) {
+          setScamScore(data.threat_score);
+          if (data.matched_patterns && data.matched_patterns.length > 0) {
+            setDetectedIndicators(data.matched_patterns);
+          }
+          if (data.threat_score >= 80) {
+            Vibration.vibrate([100, 200, 300, 400]);
+          }
+          return;
+        }
+      }
+    } catch {
+      // Backend unreachable; use fast local heuristic fallback
+    }
+
+    // Local heuristic fallback
     const lower = text.toLowerCase();
     let addScore = 0;
     const triggers: string[] = [];
@@ -104,7 +129,7 @@ export default function App() {
       addScore += 25;
       triggers.push('Customs Impersonation');
     }
-    if (lower.includes('deposit') || lower.includes('rbi hold') && !detectedIndicators.includes('Coerced Transaction Request')) {
+    if ((lower.includes('deposit') || lower.includes('rbi hold')) && !detectedIndicators.includes('Coerced Transaction Request')) {
       addScore += 30;
       triggers.push('Coerced Transaction Request');
     }

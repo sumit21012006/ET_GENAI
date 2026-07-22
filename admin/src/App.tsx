@@ -120,6 +120,59 @@ function App() {
   // Map Filter State
   const [mapFilter, setMapFilter] = useState<'all' | 'arrests' | 'seizures' | 'cells'>('all');
 
+  // Backend Integration State
+  const [apiStatus, setApiStatus] = useState<'connected' | 'offline' | 'checking'>('checking');
+  const [graphStats, setGraphStats] = useState({
+    ringsDetected: 4,
+    totalMuleAccounts: 6,
+    totalTransactions: 12,
+    flaggedTransactions: 4
+  });
+
+  // Check Backend FastAPI / Supabase Health & Graph Data
+  useEffect(() => {
+    const checkBackend = async () => {
+      try {
+        const res = await fetch('http://localhost:8000/health');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.status === 'ok') {
+            setApiStatus('connected');
+          }
+        } else {
+          setApiStatus('offline');
+        }
+      } catch {
+        setApiStatus('offline');
+      }
+    };
+
+    const fetchFraudGraph = async () => {
+      try {
+        const res = await fetch('http://localhost:8000/fraud-graph');
+        if (res.ok) {
+          const data = await res.json();
+          setGraphStats({
+            ringsDetected: data.rings_detected ?? 4,
+            totalMuleAccounts: data.total_mule_accounts ?? 6,
+            totalTransactions: data.total_transactions ?? 12,
+            flaggedTransactions: data.flagged_transactions ?? 4
+          });
+        }
+      } catch {
+        // Fallback to static values if backend is unreachable
+      }
+    };
+
+    checkBackend();
+    fetchFraudGraph();
+    const interval = setInterval(() => {
+      checkBackend();
+      fetchFraudGraph();
+    }, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Trigger words to scan transcripts for
   const SCAM_TRIGGERS = [
     { word: 'digital arrest', weight: 45, label: 'Authority Impersonation Threat' },
@@ -365,9 +418,12 @@ function App() {
           <span className="brand-badge">PUBLIC SAFETY v1.2</span>
         </div>
         
-        <div className="system-status">
+        <div className="system-status" style={{ gap: 16 }}>
+          <div style={{ fontSize: 11, background: apiStatus === 'connected' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)', border: `1px solid ${apiStatus === 'connected' ? '#10b981' : '#f59e0b'}`, color: apiStatus === 'connected' ? '#10b981' : '#f59e0b', padding: '3px 10px', borderRadius: 20, fontWeight: 'bold' }}>
+            {apiStatus === 'connected' ? '⚡ FASTAPI + GROQ AI CONNECTED' : '🛡️ SIMULATION MODE (OFFLINE)'}
+          </div>
           <span className={`status-dot ${systemStatus === 'active_alert' ? 'animate-pulse-red' : ''}`} style={{ backgroundColor: systemStatus === 'active_alert' ? '#ef4444' : '#10b981' }}></span>
-          {systemStatus === 'active_alert' ? '🚨 REAL-TIME SCAM DETECTED' : '🛡️ SYSTEM MONITORING SECURE'}
+          {systemStatus === 'active_alert' ? '🚨 REAL-TIME SCAM DETECTED' : 'SYSTEM MONITORING SECURE'}
         </div>
       </header>
 
@@ -797,7 +853,7 @@ function App() {
                   <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Mapping coordinated digital arrest transactions and money flow cycles</p>
                 </div>
                 <div style={{ fontSize: 11, background: 'rgba(239,68,68,0.1)', border: '1px solid var(--color-danger)', color: 'var(--color-danger)', padding: '4px 10px', borderRadius: 4, fontWeight: 'bold' }}>
-                  🚨 4 HIGH-VELOCITY MULE RINGS DETECTED
+                  🚨 {graphStats.ringsDetected} HIGH-VELOCITY MULE RINGS DETECTED ({graphStats.totalMuleAccounts} ACCOUNTS)
                 </div>
               </div>
 
