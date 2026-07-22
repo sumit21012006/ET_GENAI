@@ -6,13 +6,13 @@ import {
   TouchableOpacity, 
   TextInput, 
   ScrollView, 
-  SafeAreaView, 
   Modal, 
   Vibration,
   Platform,
   ActivityIndicator,
   Dimensions
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { 
   ShieldAlert as LucideShieldAlert, 
@@ -356,10 +356,12 @@ export default function App() {
 
     let step = 0;
     const interval = setInterval(() => {
-      if (step < 3) {
+      const currentStep = step;
+      if (currentStep < 3) {
         setCvFeatures(prev => {
+          if (!prev || !prev[currentStep]) return prev;
           const next = [...prev];
-          next[step].status = 'ok';
+          next[currentStep] = { ...next[currentStep], status: 'ok' };
           return next;
         });
         step++;
