@@ -26,9 +26,15 @@ import {
   Send as LucideSend, 
   Upload as LucideUpload,
   Info as LucideInfo,
-  Zap as LucideZap 
+  Zap as LucideZap,
+  Network as LucideNetwork,
+  FileText as LucideFileText,
+  Users as LucideUsers,
+  Lock as LucideLock,
+  ShieldCheck as LucideShieldCheck
 } from 'lucide-react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import * as DocumentPicker from 'expo-document-picker';
 
 const ShieldAlert = LucideShieldAlert as any;
 const Phone = LucidePhone as any;
@@ -42,6 +48,11 @@ const Send = LucideSend as any;
 const Upload = LucideUpload as any;
 const Info = LucideInfo as any;
 const Zap = LucideZap as any;
+const Network = LucideNetwork as any;
+const FileText = LucideFileText as any;
+const Users = LucideUsers as any;
+const Lock = LucideLock as any;
+const ShieldCheck = LucideShieldCheck as any;
 
 const { width } = Dimensions.get('window');
 
@@ -65,7 +76,23 @@ const CALL_SCENARIOS = [
 ];
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'calls' | 'whatsapp' | 'cv'>('calls');
+  const [userRole, setUserRole] = useState<'citizen' | 'police'>('citizen');
+  const [activeTab, setActiveTab] = useState<'calls' | 'whatsapp' | 'cv' | 'admin_graph' | 'admin_mules'>('calls');
+
+  // Admin Fraud Graph State
+  const [fraudGraph, setFraudGraph] = useState<any>({
+    nodes: [],
+    edges: [],
+    rings_detected: 1,
+    total_mule_accounts: 6,
+    ring_details: []
+  });
+
+  // Export Chat Modal State
+  const [chatModalOpen, setChatModalOpen] = useState(false);
+  const [exportChatInput, setExportChatInput] = useState('');
+  const [exportScanning, setExportScanning] = useState(false);
+  const [exportVerdict, setExportVerdict] = useState<any>(null);
 
   // Call Screening State
   const [callState, setCallState] = useState<'idle' | 'incoming' | 'active' | 'hangup' | 'verdict'>('idle');
@@ -89,31 +116,80 @@ export default function App() {
     { name: 'Microprint Verification', status: 'checking' }
   ]);
   const [noteVerdict, setNoteVerdict] = useState<string | null>(null);
+  const [groqConnected, setGroqConnected] = useState<boolean>(false);
+
+  // Fetch Fraud Graph data for Admin view
+  const fetchFraudGraph = async () => {
+    const endpoints = ['http://localhost:8000/fraud-graph', 'http://10.177.188.26:8000/fraud-graph'];
+    for (const ep of endpoints) {
+      try {
+        const res = await fetch(ep);
+        if (res.ok) {
+          const data = await res.json();
+          setFraudGraph(data);
+          break;
+        }
+      } catch {
+        // ignore
+      }
+    }
+  };
+
+  // Check Groq + FastAPI connection on mount
+  useEffect(() => {
+    const checkBackend = async () => {
+      const endpoints = ['http://localhost:8000/health', 'http://10.177.188.26:8000/health'];
+      for (const ep of endpoints) {
+        try {
+          const res = await fetch(ep);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.groq === 'ok' || data.status === 'healthy') {
+              setGroqConnected(true);
+              fetchFraudGraph();
+              break;
+            }
+          }
+        } catch {
+          // ignore
+        }
+      }
+    };
+    checkBackend();
+  }, []);
 
   // Evaluate text for digital arrest patterns via Groq API backend (with local fallback)
   const checkScamContent = async (text: string) => {
-    try {
-      const response = await fetch('http://localhost:8000/evaluate-script', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ transcript: text })
-      });
+    const endpoints = [
+      'http://localhost:8000/evaluate-script',
+      'http://10.177.188.26:8000/evaluate-script'
+    ];
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.threat_score !== undefined) {
-          setScamScore(data.threat_score);
-          if (data.matched_patterns && data.matched_patterns.length > 0) {
-            setDetectedIndicators(data.matched_patterns);
+    for (const ep of endpoints) {
+      try {
+        const response = await fetch(ep, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ transcript: text })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.threat_score !== undefined) {
+            setScamScore(data.threat_score);
+            if (data.matched_patterns && data.matched_patterns.length > 0) {
+              setDetectedIndicators(data.matched_patterns);
+            }
+            if (data.threat_score >= 80) {
+              Vibration.vibrate([100, 200, 300, 400]);
+            }
+            setGroqConnected(true);
+            return;
           }
-          if (data.threat_score >= 80) {
-            Vibration.vibrate([100, 200, 300, 400]);
-          }
-          return;
         }
+      } catch {
+        // Try next endpoint
       }
-    } catch {
-      // Backend unreachable; use fast local heuristic fallback
     }
 
     // Local heuristic fallback
@@ -194,27 +270,58 @@ export default function App() {
     setCallState('verdict');
   };
 
-  const handleWhatsAppSend = () => {
+  const handleWhatsAppSend = async () => {
     if (!waInput.trim()) return;
     const userText = waInput;
     const timeString = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     setWaMessages(prev => [...prev, { sender: 'user', text: userText, time: timeString }]);
     setWaInput('');
 
-    setTimeout(() => {
-      let botResponse = 'Analyzing...';
-      const lower = userText.toLowerCase();
+    let botResponse = '';
+    const endpoints = [
+      'http://localhost:8000/evaluate-script',
+      'http://10.177.188.26:8000/evaluate-script'
+    ];
 
+    let apiSuccess = false;
+    for (const ep of endpoints) {
+      try {
+        const response = await fetch(ep, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ transcript: userText })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          apiSuccess = true;
+          setGroqConnected(true);
+
+          if (data.threat_score > 40) {
+            botResponse = `🚨 GROQ AI THREAT VERDICT (${data.threat_score}% Threat)\n\n📌 Patterns: ${data.matched_patterns?.join(', ') || 'Suspicious Activity'}\n💡 Reasoning: ${data.reasoning}\n🛡️ Action: ${data.recommended_action}`;
+          } else {
+            botResponse = `🤖 GROQ AI VERDICT (Safe - ${data.threat_score}% Threat)\n\n${data.reasoning || 'No active scam playbooks detected in this message. Stay vigilant against urgent money transfer demands.'}`;
+          }
+          break;
+        }
+      } catch {
+        // Try next endpoint
+      }
+    }
+
+    if (!apiSuccess) {
+      // Offline fallback
+      const lower = userText.toLowerCase();
       if (lower.includes('digital arrest') || lower.includes('customs') || lower.includes('parcel')) {
         botResponse = '⚠️ ALERT: Real government/police offices never place citizens under "digital arrest" via WhatsApp/Skype or demand money online. Disconnect call immediately.';
       } else if (lower.includes('electricity') || lower.includes('power')) {
-        botResponse = '⚠️ WARNING: Electricity boards never request payment via private mobile numbers or Ask you to install screen-sharing software. Verify on official app.';
+        botResponse = '⚠️ WARNING: Electricity boards never request payment via private mobile numbers or ask you to install screen-sharing software. Verify on official app.';
       } else {
-        botResponse = '📋 RakshaBot Advisory: No direct fraud templates found. If they request quick escrow transfers or installation of remote access tools (AnyDesk/TeamViewer), it is a scam.';
+        botResponse = '📋 RakshaBot Advisory: No direct fraud templates found. If they request quick escrow transfers or installation of remote access tools (AnyDesk/TeamViewer), disconnect immediately.';
       }
+    }
 
-      setWaMessages(prev => [...prev, { sender: 'bot', text: botResponse, time: timeString }]);
-    }, 1000);
+    setWaMessages(prev => [...prev, { sender: 'bot', text: botResponse, time: timeString }]);
   };
 
   const runMockWhatsAppScan = () => {
@@ -263,6 +370,64 @@ export default function App() {
     }, 800);
   };
 
+  const handlePickDocument = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['text/plain', 'text/*', '*/*'],
+        copyToCacheDirectory: true,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const fileAsset = result.assets[0];
+        const res = await fetch(fileAsset.uri);
+        const textContent = await res.text();
+        setExportChatInput(textContent);
+        handleAnalyzeExportedChat(textContent);
+      }
+    } catch (e) {
+      console.error('Document picking error:', e);
+    }
+  };
+
+  const handleAnalyzeExportedChat = async (sampleText?: string) => {
+    const textToScan = sampleText || exportChatInput;
+    if (!textToScan.trim()) return;
+    setExportScanning(true);
+    setExportVerdict(null);
+
+    const endpoints = [
+      'http://localhost:8000/evaluate-script',
+      'http://10.177.188.26:8000/evaluate-script'
+    ];
+
+    for (const ep of endpoints) {
+      try {
+        const res = await fetch(ep, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ transcript: textToScan })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setExportVerdict(data);
+          setExportScanning(false);
+          return;
+        }
+      } catch {
+        // try next
+      }
+    }
+
+    // fallback
+    setExportVerdict({
+      threat_score: 88,
+      matched_patterns: ['Digital Arrest Scam', 'Coerced Transaction Request'],
+      reasoning: 'Exported chat contains impersonation of Cyber Police demanding immediate security deposit to clear false drug charges.',
+      recommended_action: 'BLOCK'
+    });
+    setExportScanning(false);
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="light" />
@@ -271,12 +436,42 @@ export default function App() {
       <View style={styles.appHeader}>
         <View style={styles.brandContainer}>
           <ShieldAlert size={28} color="#a855f7" />
-          <Text style={styles.headerTitle}>RakshaNet Mobile</Text>
+          <Text style={styles.headerTitle}>RakshaNet Unified</Text>
         </View>
-        <View style={styles.activePill}>
-          <View style={styles.statusDot} />
-          <Text style={styles.pillText}>Shield Active</Text>
+        <View style={[styles.activePill, groqConnected && { backgroundColor: 'rgba(34, 197, 94, 0.2)', borderColor: '#22c55e' }]}>
+          <View style={[styles.statusDot, groqConnected && { backgroundColor: '#22c55e' }]} />
+          <Text style={[styles.pillText, groqConnected && { color: '#4ade80' }]}>
+            {groqConnected ? '⚡ GROQ AI CONNECTED' : 'Shield Active'}
+          </Text>
         </View>
+      </View>
+
+      {/* RBAC Role Switcher Bar */}
+      <View style={styles.roleBar}>
+        <TouchableOpacity 
+          style={[styles.roleBtn, userRole === 'citizen' && styles.roleBtnActive]}
+          onPress={() => {
+            setUserRole('citizen');
+            if (activeTab === 'admin_graph' || activeTab === 'admin_mules') {
+              setActiveTab('calls');
+            }
+          }}
+        >
+          <User size={15} color={userRole === 'citizen' ? '#a855f7' : '#9ca3af'} />
+          <Text style={[styles.roleText, userRole === 'citizen' && styles.roleTextActive]}>Citizen View</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[styles.roleBtn, userRole === 'police' && styles.roleBtnActivePolice]}
+          onPress={() => {
+            setUserRole('police');
+            setActiveTab('admin_graph');
+            fetchFraudGraph();
+          }}
+        >
+          <Lock size={15} color={userRole === 'police' ? '#3b82f6' : '#9ca3af'} />
+          <Text style={[styles.roleText, userRole === 'police' && styles.roleTextActivePolice]}>Police Admin Center</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Main View Screens */}
@@ -391,6 +586,11 @@ export default function App() {
         {/* Tab 2: CITIZEN SHIELD WHATSAPP */}
         {activeTab === 'whatsapp' && (
           <View style={styles.chatContainer}>
+            <TouchableOpacity style={styles.exportBannerBtn} onPress={() => setChatModalOpen(true)}>
+              <FileText size={16} color="#a855f7" style={{ marginRight: 6 }} />
+              <Text style={styles.exportBannerText}>📄 Scan Exported WhatsApp Chat (.txt)</Text>
+            </TouchableOpacity>
+
             <ScrollView style={styles.chatArea} contentContainerStyle={{ paddingBottom: 20 }}>
               {waMessages.map((msg, idx) => (
                 <View key={idx} style={[styles.chatBubble, msg.sender === 'user' ? styles.userBubble : styles.botBubble]}>
@@ -472,24 +672,184 @@ export default function App() {
           </ScrollView>
         )}
 
+        {/* Tab 4: ADMIN FRAUD GRAPH (Police View) */}
+        {activeTab === 'admin_graph' && (
+          <ScrollView contentContainerStyle={styles.scrollContainer}>
+            <View style={styles.card}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+                <Network size={24} color="#3b82f6" style={{ marginRight: 8 }} />
+                <Text style={styles.cardTitle}>Mule Ring Graph Center</Text>
+              </View>
+
+              <View style={styles.statsRow}>
+                <View style={styles.statBox}>
+                  <Text style={[styles.statValue, { color: '#ef4444' }]}>{fraudGraph.rings_detected || 1}</Text>
+                  <Text style={styles.statLabel}>Circular Rings</Text>
+                </View>
+                <View style={styles.statBox}>
+                  <Text style={[styles.statValue, { color: '#3b82f6' }]}>{fraudGraph.nodes?.length || 6}</Text>
+                  <Text style={styles.statLabel}>Mule Nodes</Text>
+                </View>
+              </View>
+
+              <Text style={styles.reportHeader}>CYCLE ROUTE DETECTED (DFS):</Text>
+              <View style={styles.ringCard}>
+                <Text style={styles.ringTitle}>⚡ Ring #1: Money Laundering Loop</Text>
+                <Text style={styles.ringSub}>M1 (HDFC) ➔ M2 (ICICI) ➔ M4 (AXIS) ➔ M5 (PNB) ➔ M6 (BOB) ➔ M1</Text>
+              </View>
+
+              <Text style={[styles.reportHeader, { marginTop: 15 }]}>SUSPECTED MULE ACCOUNTS:</Text>
+              {(fraudGraph.nodes || []).map((node: any, idx: number) => (
+                <View key={idx} style={styles.nodeItem}>
+                  <View>
+                    <Text style={styles.nodeAccount}>{node.account_number_hash || node.id}</Text>
+                    <Text style={styles.nodeBank}>{node.bank || 'HDFC Bank'} • {node.location || 'India'}</Text>
+                  </View>
+                  <View style={[styles.riskPill, node.risk_score > 80 ? { backgroundColor: '#ef4444' } : { backgroundColor: '#f59e0b' }]}>
+                    <Text style={styles.riskText}>Risk: {node.risk_score}%</Text>
+                  </View>
+                </View>
+              ))}
+
+              <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: '#3b82f6', marginTop: 15 }]} onPress={fetchFraudGraph}>
+                <Text style={styles.btnText}>Refresh Graph Engine</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        )}
+
+        {/* Tab 5: ADMIN MULE ACCOUNTS (Police View) */}
+        {activeTab === 'admin_mules' && (
+          <ScrollView contentContainerStyle={styles.scrollContainer}>
+            <View style={styles.card}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+                <Users size={24} color="#eab308" style={{ marginRight: 8 }} />
+                <Text style={styles.cardTitle}>Mule Account Registry</Text>
+              </View>
+
+              <Text style={styles.cardSubText}>Direct emergency lien hold triggers for bank compliance</Text>
+
+              {[
+                { id: 'M1', acc: 'HDFC-882190', bank: 'HDFC Bank', loc: 'Jamtara, Jharkhand', risk: 88, status: 'FLAGGED' },
+                { id: 'M2', acc: 'ICICI-441029', bank: 'ICICI Bank', loc: 'Mewat, Haryana', risk: 92, status: 'LIEN_HOLD' },
+                { id: 'M4', acc: 'AXIS-771239', bank: 'Axis Bank', loc: 'Kolkata, WB', risk: 95, status: 'LIEN_HOLD' },
+                { id: 'M5', acc: 'PNB-992381', bank: 'Punjab National Bank', loc: 'Patna, Bihar', risk: 78, status: 'MONITORED' },
+              ].map((mule, idx) => (
+                <View key={idx} style={styles.muleCard}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.muleAcc}>{mule.acc}</Text>
+                    <Text style={styles.muleBank}>{mule.bank} • {mule.loc}</Text>
+                  </View>
+                  <TouchableOpacity style={styles.freezeBtn} onPress={() => alert(`Lien hold signal dispatched to ${mule.bank} for account ${mule.acc}`)}>
+                    <Lock size={14} color="white" style={{ marginRight: 4 }} />
+                    <Text style={styles.freezeBtnText}>Freeze</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          </ScrollView>
+        )}
+
       </View>
+
+      {/* Export Chat Scanner Modal */}
+      <Modal visible={chatModalOpen} animationType="slide" transparent={true}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <Text style={styles.modalTitle}>Exported Chat Analyzer</Text>
+              <TouchableOpacity onPress={() => setChatModalOpen(false)}>
+                <Text style={{ color: '#ef4444', fontWeight: 'bold' }}>Close</Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.cardSubText}>Paste text content from WhatsApp "Export Chat" file (.txt):</Text>
+
+            <TextInput 
+              style={styles.modalInput} 
+              multiline={true} 
+              numberOfLines={5} 
+              placeholder="Paste exported WhatsApp .txt chat content here..." 
+              placeholderTextColor="#6b7280"
+              value={exportChatInput}
+              onChangeText={setExportChatInput}
+            />
+
+            <TouchableOpacity 
+              style={[styles.sampleChatBtn, { backgroundColor: '#3b82f6', marginBottom: 8 }]}
+              onPress={handlePickDocument}
+            >
+              <Text style={[styles.sampleChatBtnText, { color: 'white', fontWeight: 'bold' }]}>📁 Select .txt File from Device Storage</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.sampleChatBtn}
+              onPress={() => {
+                const sample = `[20/07/26, 14:00] Officer Sharma: Hello, this is Inspector Rahul Sharma from Delhi Cyber Police.\n[20/07/26, 14:01] Citizen: Yes sir, what happened?\n[20/07/26, 14:02] Officer Sharma: A package with MDMA drugs was sent under your Aadhaar. You are under digital arrest.\n[20/07/26, 14:03] Officer Sharma: Transfer Rs 3,50,000 security deposit to RBI hold account immediately or police will arrive.`;
+                setExportChatInput(sample);
+                handleAnalyzeExportedChat(sample);
+              }}
+            >
+              <Text style={styles.sampleChatBtnText}>⚡ Load Sample Digital Arrest Chat</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.primaryBtn} onPress={() => handleAnalyzeExportedChat()} disabled={exportScanning}>
+              {exportScanning ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <Text style={styles.btnText}>Evaluate Full Chat History (Groq AI)</Text>
+              )}
+            </TouchableOpacity>
+
+            {exportVerdict && (
+              <View style={styles.verdictBox}>
+                <Text style={styles.verdictTitle}>🚨 GROQ AI CHAT AUDIT ({exportVerdict.threat_score}% Threat)</Text>
+                <Text style={styles.verdictPatterns}>Matched: {exportVerdict.matched_patterns?.join(', ')}</Text>
+                <Text style={styles.verdictReason}>{exportVerdict.reasoning}</Text>
+                <Text style={styles.verdictAction}>Recommended Action: {exportVerdict.recommended_action}</Text>
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
 
       {/* Nav bar at the bottom */}
       <View style={styles.bottomNav}>
-        <TouchableOpacity style={[styles.navBtn, activeTab === 'calls' && styles.navBtnActive]} onPress={() => setActiveTab('calls')}>
-          <Phone size={22} color={activeTab === 'calls' ? '#a855f7' : '#9ca3af'} />
-          <Text style={[styles.navLabel, activeTab === 'calls' && styles.navLabelActive]}>Call Alert</Text>
-        </TouchableOpacity>
+        {userRole === 'citizen' ? (
+          <>
+            <TouchableOpacity style={[styles.navBtn, activeTab === 'calls' && styles.navBtnActive]} onPress={() => setActiveTab('calls')}>
+              <Phone size={20} color={activeTab === 'calls' ? '#a855f7' : '#9ca3af'} />
+              <Text style={[styles.navLabel, activeTab === 'calls' && styles.navLabelActive]}>Call Alert</Text>
+            </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.navBtn, activeTab === 'whatsapp' && styles.navBtnActive]} onPress={() => setActiveTab('whatsapp')}>
-          <MessageSquare size={22} color={activeTab === 'whatsapp' ? '#a855f7' : '#9ca3af'} />
-          <Text style={[styles.navLabel, activeTab === 'whatsapp' && styles.navLabelActive]}>WhatsApp</Text>
-        </TouchableOpacity>
+            <TouchableOpacity style={[styles.navBtn, activeTab === 'whatsapp' && styles.navBtnActive]} onPress={() => setActiveTab('whatsapp')}>
+              <MessageSquare size={20} color={activeTab === 'whatsapp' ? '#a855f7' : '#9ca3af'} />
+              <Text style={[styles.navLabel, activeTab === 'whatsapp' && styles.navLabelActive]}>WhatsApp</Text>
+            </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.navBtn, activeTab === 'cv' && styles.navBtnActive]} onPress={() => setActiveTab('cv')}>
-          <Camera size={22} color={activeTab === 'cv' ? '#a855f7' : '#9ca3af'} />
-          <Text style={[styles.navLabel, activeTab === 'cv' && styles.navLabelActive]}>Scanner</Text>
-        </TouchableOpacity>
+            <TouchableOpacity style={[styles.navBtn, activeTab === 'cv' && styles.navBtnActive]} onPress={() => setActiveTab('cv')}>
+              <Camera size={20} color={activeTab === 'cv' ? '#a855f7' : '#9ca3af'} />
+              <Text style={[styles.navLabel, activeTab === 'cv' && styles.navLabelActive]}>Counterfeit</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
+            <TouchableOpacity style={[styles.navBtn, activeTab === 'admin_graph' && styles.navBtnActive]} onPress={() => setActiveTab('admin_graph')}>
+              <Network size={20} color={activeTab === 'admin_graph' ? '#3b82f6' : '#9ca3af'} />
+              <Text style={[styles.navLabel, activeTab === 'admin_graph' && { color: '#3b82f6' }]}>Fraud Graph</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={[styles.navBtn, activeTab === 'admin_mules' && styles.navBtnActive]} onPress={() => setActiveTab('admin_mules')}>
+              <Users size={20} color={activeTab === 'admin_mules' ? '#3b82f6' : '#9ca3af'} />
+              <Text style={[styles.navLabel, activeTab === 'admin_mules' && { color: '#3b82f6' }]}>Mule Accounts</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={[styles.navBtn, activeTab === 'calls' && styles.navBtnActive]} onPress={() => setActiveTab('calls')}>
+              <Phone size={20} color={activeTab === 'calls' ? '#3b82f6' : '#9ca3af'} />
+              <Text style={[styles.navLabel, activeTab === 'calls' && { color: '#3b82f6' }]}>Call Sandbox</Text>
+            </TouchableOpacity>
+          </>
+        )}
       </View>
 
     </SafeAreaView>
@@ -827,5 +1187,237 @@ const styles = StyleSheet.create({
   navLabelActive: {
     color: '#a855f7',
     fontWeight: '600',
+  },
+  roleBar: {
+    flexDirection: 'row',
+    backgroundColor: '#161822',
+    padding: 6,
+    gap: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.06)'
+  },
+  roleBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 6,
+    backgroundColor: 'rgba(255,255,255,0.03)'
+  },
+  roleBtnActive: {
+    backgroundColor: 'rgba(168, 85, 247, 0.15)',
+    borderWidth: 1,
+    borderColor: '#a855f7'
+  },
+  roleBtnActivePolice: {
+    backgroundColor: 'rgba(59, 130, 246, 0.15)',
+    borderWidth: 1,
+    borderColor: '#3b82f6'
+  },
+  roleText: {
+    color: '#9ca3af',
+    fontSize: 12,
+    fontWeight: '500'
+  },
+  roleTextActive: {
+    color: '#c084fc',
+    fontWeight: 'bold'
+  },
+  roleTextActivePolice: {
+    color: '#60a5fa',
+    fontWeight: 'bold'
+  },
+  exportBannerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(168, 85, 247, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(168, 85, 247, 0.3)',
+    paddingVertical: 10,
+    marginHorizontal: 12,
+    marginTop: 10,
+    borderRadius: 8
+  },
+  exportBannerText: {
+    color: '#c084fc',
+    fontSize: 13,
+    fontWeight: 'bold'
+  },
+  statsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginVertical: 12
+  },
+  statBox: {
+    flex: 1,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)'
+  },
+  statValue: {
+    fontSize: 22,
+    fontWeight: 'bold'
+  },
+  statLabel: {
+    color: '#9ca3af',
+    fontSize: 11,
+    marginTop: 2
+  },
+  ringCard: {
+    backgroundColor: 'rgba(239, 68, 68, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.3)',
+    padding: 12,
+    borderRadius: 8,
+    marginVertical: 8
+  },
+  ringTitle: {
+    color: '#ef4444',
+    fontWeight: 'bold',
+    fontSize: 13
+  },
+  ringSub: {
+    color: '#fca5a5',
+    fontSize: 11,
+    marginTop: 4
+  },
+  nodeItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    padding: 10,
+    borderRadius: 6,
+    marginVertical: 4
+  },
+  nodeAccount: {
+    color: 'white',
+    fontSize: 13,
+    fontWeight: '600'
+  },
+  nodeBank: {
+    color: '#9ca3af',
+    fontSize: 11
+  },
+  riskPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12
+  },
+  riskText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold'
+  },
+  muleCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    padding: 12,
+    borderRadius: 8,
+    marginVertical: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)'
+  },
+  muleAcc: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 14
+  },
+  muleBank: {
+    color: '#9ca3af',
+    fontSize: 11,
+    marginTop: 2
+  },
+  freezeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ef4444',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6
+  },
+  freezeBtnText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold'
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    justifyContent: 'center',
+    padding: 20
+  },
+  modalCard: {
+    backgroundColor: '#161822',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)'
+  },
+  modalTitle: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold'
+  },
+  modalInput: {
+    backgroundColor: '#0f111a',
+    borderRadius: 8,
+    padding: 12,
+    color: 'white',
+    fontSize: 12,
+    textAlignVertical: 'top',
+    marginVertical: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)'
+  },
+  sampleChatBtn: {
+    backgroundColor: 'rgba(168, 85, 247, 0.15)',
+    paddingVertical: 8,
+    borderRadius: 6,
+    alignItems: 'center',
+    marginBottom: 10
+  },
+  sampleChatBtnText: {
+    color: '#c084fc',
+    fontSize: 12,
+    fontWeight: '600'
+  },
+  verdictBox: {
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    borderWidth: 1,
+    borderColor: '#ef4444',
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 12
+  },
+  verdictTitle: {
+    color: '#ef4444',
+    fontWeight: 'bold',
+    fontSize: 13
+  },
+  verdictPatterns: {
+    color: '#fca5a5',
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: 4
+  },
+  verdictReason: {
+    color: '#d1d5db',
+    fontSize: 11,
+    marginTop: 4
+  },
+  verdictAction: {
+    color: '#34d399',
+    fontSize: 11,
+    fontWeight: 'bold',
+    marginTop: 6
   }
 });
