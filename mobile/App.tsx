@@ -780,7 +780,7 @@ export default function App() {
                       ]}
                       onPress={() => setSelectedScenarioIndex(idx)}
                     >
-                      <Text style={[styles.scenarioSelectText, selectedScenarioIndex === idx && { color: 'white', fontWeight: 'bold' }]}>
+                      <Text style={[styles.scenarioSelectText, selectedScenarioIndex === idx && { color: '#7c3aed', fontWeight: 'bold' }]}>
                         {selectedScenarioIndex === idx ? '🔘 ' : '⚪ '} {sc.name}
                       </Text>
                     </TouchableOpacity>
@@ -797,7 +797,7 @@ export default function App() {
               <View style={[styles.card, { borderColor: '#ef4444' }]}>
                 <View style={{ alignItems: 'center', marginVertical: 30 }}>
                   <View style={styles.avatarGlow}>
-                    <User size={48} color="white" />
+                    <User size={48} color="#64748b" />
                   </View>
                   <Text style={styles.incomingNumber}>{CALL_SCENARIOS[selectedScenarioIndex].number}</Text>
                   <Text style={styles.alertText}>{CALL_SCENARIOS[selectedScenarioIndex].risk}</Text>
@@ -819,7 +819,7 @@ export default function App() {
               <View style={styles.card}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                   <Text style={styles.activeNumber}>{CALL_SCENARIOS[selectedScenarioIndex].number}</Text>
-                  <Text style={[styles.dangerPill, { color: scamScore >= 50 ? '#f87171' : '#a855f7' }]}>
+                  <Text style={[styles.dangerPill, { color: scamScore >= 50 ? '#dc2626' : '#7c3aed' }]}>
                     Threat Index: {scamScore}%
                   </Text>
                 </View>
@@ -830,13 +830,13 @@ export default function App() {
                 ]}>
                   {isSpeaking ? (
                     <>
-                      <Volume2 size={16} color="#eab308" style={{ marginRight: 6 }} />
-                      <Text style={{ color: '#fde047', fontSize: 11, fontWeight: 'bold' }}>🔊 CALLER IS SPEAKING (LISTENING LIVE...)</Text>
+                      <Volume2 size={16} color="#854d0e" style={{ marginRight: 6 }} />
+                      <Text style={{ color: '#854d0e', fontSize: 11, fontWeight: 'bold' }}>🔊 CALLER IS SPEAKING (LISTENING LIVE...)</Text>
                     </>
                   ) : (
                     <>
-                      <Mic size={16} color="#c084fc" style={{ marginRight: 6 }} />
-                      <Text style={{ color: '#e9d5ff', fontSize: 11, fontWeight: 'bold' }}>🎤 YOUR TURN — REPLY TO CALLER BELOW</Text>
+                      <Mic size={16} color="#6d28d9" style={{ marginRight: 6 }} />
+                      <Text style={{ color: '#6d28d9', fontSize: 11, fontWeight: 'bold' }}>🎤 YOUR TURN — REPLY TO CALLER BELOW</Text>
                     </>
                   )}
                 </View>
@@ -852,7 +852,7 @@ export default function App() {
 
                 {/* Quick Reply Chips */}
                 <View style={{ marginVertical: 8 }}>
-                  <Text style={{ color: '#9ca3af', fontSize: 11, marginBottom: 4 }}>TAP 1-CLICK REPLY TO ANSWER CALLER:</Text>
+                  <Text style={{ color: '#475569', fontSize: 11, fontWeight: 'bold', marginBottom: 4 }}>TAP 1-CLICK REPLY TO ANSWER CALLER:</Text>
                   <ScrollView horizontal={true} showsHorizontalScrollIndicator={false}>
                     {[
                       "What?! I didn't send any package!",
