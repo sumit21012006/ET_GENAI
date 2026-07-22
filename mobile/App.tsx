@@ -32,10 +32,13 @@ import {
   FileText as LucideFileText,
   Users as LucideUsers,
   Lock as LucideLock,
-  ShieldCheck as LucideShieldCheck
+  ShieldCheck as LucideShieldCheck,
+  Mic as LucideMic,
+  Volume2 as LucideVolume2
 } from 'lucide-react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as DocumentPicker from 'expo-document-picker';
+import * as Speech from 'expo-speech';
 
 const ShieldAlert = LucideShieldAlert as any;
 const Phone = LucidePhone as any;
@@ -54,6 +57,8 @@ const FileText = LucideFileText as any;
 const Users = LucideUsers as any;
 const Lock = LucideLock as any;
 const ShieldCheck = LucideShieldCheck as any;
+const Mic = LucideMic as any;
+const Volume2 = LucideVolume2 as any;
 
 const { width } = Dimensions.get('window');
 
@@ -261,6 +266,9 @@ export default function App() {
     const lineText = liveCallerText.trim();
     setCallTranscript(prev => [...prev, { speaker: 'scammer', text: lineText }]);
     setLiveCallerText('');
+    try {
+      Speech.speak(lineText, { language: 'en-IN', rate: 0.95, pitch: 0.9 });
+    } catch {}
     checkScamContent(lineText);
   };
 
@@ -271,6 +279,9 @@ export default function App() {
   };
 
   const answerCall = () => {
+    try {
+      Speech.stop();
+    } catch {}
     setCallTranscript([]);
     setScamScore(0);
     setDetectedIndicators([]);
@@ -285,25 +296,34 @@ export default function App() {
         setCallTranscript(prev => [...prev, { speaker: line.speaker as 'scammer' | 'user', text: line.text }]);
         
         if (line.speaker === 'scammer') {
+          try {
+            Speech.speak(line.text, { language: 'en-IN', rate: 0.95, pitch: 0.9 });
+          } catch {}
           checkScamContent(line.text);
         }
         step++;
       } else {
         clearInterval(dialogueTimerRef.current);
       }
-    }, 2500);
+    }, 3500);
   };
 
   // Auto-hangup checker
   useEffect(() => {
     if (scamScore >= 80 && callState === 'active') {
+      try {
+        Speech.stop();
+      } catch {}
       clearInterval(dialogueTimerRef.current);
       setCallState('hangup');
-      Vibration.vibrate(800);
+      Vibration.vibrate([200, 400, 200, 400, 600]);
     }
   }, [scamScore, callState]);
 
   const disconnectCall = () => {
+    try {
+      Speech.stop();
+    } catch {}
     clearInterval(dialogueTimerRef.current);
     setCallState('verdict');
   };
@@ -703,11 +723,16 @@ export default function App() {
 
             {callState === 'active' && (
               <View style={styles.card}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                   <Text style={styles.activeNumber}>{CALL_SCENARIOS[selectedScenarioIndex].number}</Text>
                   <Text style={[styles.dangerPill, { color: scamScore >= 50 ? '#f87171' : '#a855f7' }]}>
                     Threat Index: {scamScore}%
                   </Text>
+                </View>
+
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12, backgroundColor: 'rgba(34, 197, 94, 0.1)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 }}>
+                  <Volume2 size={16} color="#22c55e" style={{ marginRight: 6 }} />
+                  <Text style={{ color: '#4ade80', fontSize: 11, fontWeight: 'bold' }}>LIVE VOICE STREAM EVALUATING (EXPO SPEECH AI ON)</Text>
                 </View>
 
                 <ScrollView style={styles.transcriptBox} contentContainerStyle={{ padding: 10 }}>
