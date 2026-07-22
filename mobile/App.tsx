@@ -132,6 +132,9 @@ export default function App() {
   // Call Screening State
   const [callState, setCallState] = useState<'idle' | 'incoming' | 'active' | 'hangup' | 'verdict'>('idle');
   const [selectedScenarioIndex, setSelectedScenarioIndex] = useState(0);
+  const [dialogueStep, setDialogueStep] = useState(0);
+  const [isWaitingForUser, setIsWaitingForUser] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const [liveCallerText, setLiveCallerText] = useState('');
   const [scamScore, setScamScore] = useState(0);
   const [callTranscript, setCallTranscript] = useState<{ speaker: 'scammer' | 'user'; text: string }[]>([]);
@@ -261,15 +264,72 @@ export default function App() {
     }
   };
 
+  const speakScammerStep = (stepIdx: number) => {
+    const scenario = CALL_SCENARIOS[selectedScenarioIndex] || CALL_SCENARIOS[0];
+    if (stepIdx >= scenario.dialogue.length) return;
+
+    const currentLine = scenario.dialogue[stepIdx];
+    if (currentLine.speaker === 'scammer') {
+      setIsSpeaking(true);
+      setIsWaitingForUser(false);
+      setCallTranscript(prev => [...prev, { speaker: 'scammer', text: currentLine.text }]);
+      checkScamContent(currentLine.text);
+
+      try {
+        Speech.stop();
+        Speech.speak(currentLine.text, {
+          language: 'en-IN',
+          rate: 1.05,
+          pitch: 1.0,
+          onDone: () => {
+            setIsSpeaking(false);
+            setIsWaitingForUser(true);
+          },
+          onError: () => {
+            setIsSpeaking(false);
+            setIsWaitingForUser(true);
+          }
+        });
+      } catch {
+        setIsSpeaking(false);
+        setIsWaitingForUser(true);
+      }
+    }
+  };
+
+  const sendUserReply = (replyText: string) => {
+    if (!replyText.trim()) return;
+    const userLine = replyText.trim();
+    setCallTranscript(prev => [...prev, { speaker: 'user', text: userLine }]);
+    setIsWaitingForUser(false);
+    setIsSpeaking(false);
+    setLiveCallerText('');
+
+    // Advance to next scammer turn after 1.2s delay
+    const nextStep = dialogueStep + 1;
+    const scenario = CALL_SCENARIOS[selectedScenarioIndex] || CALL_SCENARIOS[0];
+
+    let foundNext = -1;
+    for (let i = nextStep; i < scenario.dialogue.length; i++) {
+      if (scenario.dialogue[i].speaker === 'scammer') {
+        foundNext = i;
+        break;
+      }
+    }
+
+    if (foundNext !== -1) {
+      setDialogueStep(foundNext);
+      setTimeout(() => {
+        speakScammerStep(foundNext);
+      }, 1200);
+    } else {
+      setIsWaitingForUser(true);
+    }
+  };
+
   const sendLiveCallerLine = () => {
     if (!liveCallerText.trim()) return;
-    const lineText = liveCallerText.trim();
-    setCallTranscript(prev => [...prev, { speaker: 'scammer', text: lineText }]);
-    setLiveCallerText('');
-    try {
-      Speech.speak(lineText, { language: 'en-IN', rate: 0.95, pitch: 0.9 });
-    } catch {}
-    checkScamContent(lineText);
+    sendUserReply(liveCallerText);
   };
 
   // Call controls
@@ -282,30 +342,18 @@ export default function App() {
     try {
       Speech.stop();
     } catch {}
+    if (dialogueTimerRef.current) clearInterval(dialogueTimerRef.current);
     setCallTranscript([]);
     setScamScore(0);
     setDetectedIndicators([]);
     setCallState('active');
+    setDialogueStep(0);
+    setIsWaitingForUser(false);
 
-    let step = 0;
-    const scenario = CALL_SCENARIOS[selectedScenarioIndex] || CALL_SCENARIOS[0];
-
-    dialogueTimerRef.current = setInterval(() => {
-      if (step < scenario.dialogue.length) {
-        const line = scenario.dialogue[step];
-        setCallTranscript(prev => [...prev, { speaker: line.speaker as 'scammer' | 'user', text: line.text }]);
-        
-        if (line.speaker === 'scammer') {
-          try {
-            Speech.speak(line.text, { language: 'en-IN', rate: 0.95, pitch: 0.9 });
-          } catch {}
-          checkScamContent(line.text);
-        }
-        step++;
-      } else {
-        clearInterval(dialogueTimerRef.current);
-      }
-    }, 3500);
+    // Speak initial scammer line
+    setTimeout(() => {
+      speakScammerStep(0);
+    }, 400);
   };
 
   // Auto-hangup checker
@@ -730,9 +778,21 @@ export default function App() {
                   </Text>
                 </View>
 
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12, backgroundColor: 'rgba(34, 197, 94, 0.1)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 }}>
-                  <Volume2 size={16} color="#22c55e" style={{ marginRight: 6 }} />
-                  <Text style={{ color: '#4ade80', fontSize: 11, fontWeight: 'bold' }}>LIVE VOICE STREAM EVALUATING (EXPO SPEECH AI ON)</Text>
+                <View style={[
+                  styles.statusBadgeRow,
+                  isSpeaking ? { backgroundColor: 'rgba(234, 179, 8, 0.15)', borderColor: '#eab308' } : { backgroundColor: 'rgba(168, 85, 247, 0.15)', borderColor: '#a855f7' }
+                ]}>
+                  {isSpeaking ? (
+                    <>
+                      <Volume2 size={16} color="#eab308" style={{ marginRight: 6 }} />
+                      <Text style={{ color: '#fde047', fontSize: 11, fontWeight: 'bold' }}>🔊 CALLER IS SPEAKING (LISTENING LIVE...)</Text>
+                    </>
+                  ) : (
+                    <>
+                      <Mic size={16} color="#c084fc" style={{ marginRight: 6 }} />
+                      <Text style={{ color: '#e9d5ff', fontSize: 11, fontWeight: 'bold' }}>🎤 YOUR TURN — REPLY TO CALLER BELOW</Text>
+                    </>
+                  )}
                 </View>
 
                 <ScrollView style={styles.transcriptBox} contentContainerStyle={{ padding: 10 }}>
@@ -744,11 +804,32 @@ export default function App() {
                   ))}
                 </ScrollView>
 
+                {/* Quick Reply Chips */}
+                <View style={{ marginVertical: 8 }}>
+                  <Text style={{ color: '#9ca3af', fontSize: 11, marginBottom: 4 }}>TAP 1-CLICK REPLY TO ANSWER CALLER:</Text>
+                  <ScrollView horizontal={true} showsHorizontalScrollIndicator={false}>
+                    {[
+                      "What?! I didn't send any package!",
+                      "I am innocent, check again!",
+                      "Why is my account blocked?",
+                      "I already paid my bill yesterday!"
+                    ].map((chip, idx) => (
+                      <TouchableOpacity 
+                        key={idx} 
+                        style={styles.replyChip}
+                        onPress={() => sendUserReply(chip)}
+                      >
+                        <Text style={styles.replyChipText}>{chip}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+
                 {/* Live Speech Simulation Input Bar */}
                 <View style={styles.liveCallerBox}>
                   <TextInput 
                     style={styles.liveCallerInput}
-                    placeholder="Simulate caller speech live to test Groq AI..."
+                    placeholder="Type or speak custom response to caller..."
                     placeholderTextColor="#6b7280"
                     value={liveCallerText}
                     onChangeText={setLiveCallerText}
@@ -1238,6 +1319,28 @@ const styles = StyleSheet.create({
   userLine: {
     color: '#93c5fd',
     textAlign: 'right',
+  },
+  statusBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  replyChip: {
+    backgroundColor: '#1f2937',
+    borderColor: '#374151',
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 14,
+    marginRight: 6,
+  },
+  replyChipText: {
+    color: '#38bdf8',
+    fontSize: 12,
   },
   reportBox: {
     backgroundColor: 'rgba(255,255,255,0.02)',
