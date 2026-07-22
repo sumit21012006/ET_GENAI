@@ -711,17 +711,17 @@ export default function App() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
 
       {/* Header bar */}
       <View style={styles.appHeader}>
         <View style={styles.brandContainer}>
-          <ShieldAlert size={28} color="#a855f7" />
+          <ShieldAlert size={28} color="#7c3aed" />
           <Text style={styles.headerTitle}>RakshaNet Unified</Text>
         </View>
-        <View style={[styles.activePill, groqConnected && { backgroundColor: 'rgba(34, 197, 94, 0.2)', borderColor: '#22c55e' }]}>
-          <View style={[styles.statusDot, groqConnected && { backgroundColor: '#22c55e' }]} />
-          <Text style={[styles.pillText, groqConnected && { color: '#4ade80' }]}>
+        <View style={[styles.activePill, groqConnected && { backgroundColor: '#ecfdf5', borderColor: '#a7f3d0' }]}>
+          <View style={[styles.statusDot, groqConnected && { backgroundColor: '#059669' }]} />
+          <Text style={[styles.pillText, groqConnected && { color: '#047857' }]}>
             {groqConnected ? '⚡ GROQ AI CONNECTED' : 'Shield Active'}
           </Text>
         </View>
@@ -738,7 +738,7 @@ export default function App() {
             }
           }}
         >
-          <User size={15} color={userRole === 'citizen' ? '#a855f7' : '#9ca3af'} />
+          <User size={15} color={userRole === 'citizen' ? '#ffffff' : '#475569'} />
           <Text style={[styles.roleText, userRole === 'citizen' && styles.roleTextActive]}>Citizen View</Text>
         </TouchableOpacity>
 
@@ -750,7 +750,7 @@ export default function App() {
             fetchFraudGraph();
           }}
         >
-          <Lock size={15} color={userRole === 'police' ? '#3b82f6' : '#9ca3af'} />
+          <Lock size={15} color={userRole === 'police' ? '#ffffff' : '#475569'} />
           <Text style={[styles.roleText, userRole === 'police' && styles.roleTextActivePolice]}>Police Admin Center</Text>
         </TouchableOpacity>
       </View>
@@ -764,7 +764,7 @@ export default function App() {
             {callState === 'idle' && (
               <View style={styles.card}>
                 <View style={{ alignItems: 'center', marginBottom: 15 }}>
-                  <Phone size={48} color="#a855f7" />
+                  <Phone size={48} color="#7c3aed" />
                   <Text style={styles.cardTitle}>Real-Time Call Screening Agent</Text>
                   <Text style={styles.cardSubText}>Live Groq AI threat analysis for incoming calls</Text>
                 </View>
@@ -1167,35 +1167,35 @@ export default function App() {
         {userRole === 'citizen' ? (
           <>
             <TouchableOpacity style={[styles.navBtn, activeTab === 'calls' && styles.navBtnActive]} onPress={() => setActiveTab('calls')}>
-              <Phone size={20} color={activeTab === 'calls' ? '#a855f7' : '#9ca3af'} />
+              <Phone size={20} color={activeTab === 'calls' ? '#7c3aed' : '#64748b'} />
               <Text style={[styles.navLabel, activeTab === 'calls' && styles.navLabelActive]}>Call Alert</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={[styles.navBtn, activeTab === 'whatsapp' && styles.navBtnActive]} onPress={() => setActiveTab('whatsapp')}>
-              <MessageSquare size={20} color={activeTab === 'whatsapp' ? '#a855f7' : '#9ca3af'} />
+              <MessageSquare size={20} color={activeTab === 'whatsapp' ? '#7c3aed' : '#64748b'} />
               <Text style={[styles.navLabel, activeTab === 'whatsapp' && styles.navLabelActive]}>WhatsApp</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={[styles.navBtn, activeTab === 'cv' && styles.navBtnActive]} onPress={() => setActiveTab('cv')}>
-              <Camera size={20} color={activeTab === 'cv' ? '#a855f7' : '#9ca3af'} />
+              <Camera size={20} color={activeTab === 'cv' ? '#7c3aed' : '#64748b'} />
               <Text style={[styles.navLabel, activeTab === 'cv' && styles.navLabelActive]}>Counterfeit</Text>
             </TouchableOpacity>
           </>
         ) : (
           <>
             <TouchableOpacity style={[styles.navBtn, activeTab === 'admin_graph' && styles.navBtnActive]} onPress={() => setActiveTab('admin_graph')}>
-              <Network size={20} color={activeTab === 'admin_graph' ? '#3b82f6' : '#9ca3af'} />
-              <Text style={[styles.navLabel, activeTab === 'admin_graph' && { color: '#3b82f6' }]}>Fraud Graph</Text>
+              <Network size={20} color={activeTab === 'admin_graph' ? '#2563eb' : '#64748b'} />
+              <Text style={[styles.navLabel, activeTab === 'admin_graph' && { color: '#2563eb' }]}>Fraud Graph</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={[styles.navBtn, activeTab === 'admin_mules' && styles.navBtnActive]} onPress={() => setActiveTab('admin_mules')}>
-              <Users size={20} color={activeTab === 'admin_mules' ? '#3b82f6' : '#9ca3af'} />
-              <Text style={[styles.navLabel, activeTab === 'admin_mules' && { color: '#3b82f6' }]}>Mule Accounts</Text>
+              <Users size={20} color={activeTab === 'admin_mules' ? '#2563eb' : '#64748b'} />
+              <Text style={[styles.navLabel, activeTab === 'admin_mules' && { color: '#2563eb' }]}>Mule Accounts</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={[styles.navBtn, activeTab === 'calls' && styles.navBtnActive]} onPress={() => setActiveTab('calls')}>
-              <Phone size={20} color={activeTab === 'calls' ? '#3b82f6' : '#9ca3af'} />
-              <Text style={[styles.navLabel, activeTab === 'calls' && { color: '#3b82f6' }]}>Call Sandbox</Text>
+              <Phone size={20} color={activeTab === 'calls' ? '#2563eb' : '#64748b'} />
+              <Text style={[styles.navLabel, activeTab === 'calls' && { color: '#2563eb' }]}>Call Sandbox</Text>
             </TouchableOpacity>
           </>
         )}
@@ -1208,17 +1208,22 @@ export default function App() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#0a0b10',
+    backgroundColor: '#f8fafc',
   },
   appHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.08)',
-    backgroundColor: '#12131a',
+    borderBottomColor: '#e2e8f0',
+    backgroundColor: '#ffffff',
+    shadowColor: '#64748b',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   brandContainer: {
     flexDirection: 'row',
@@ -1226,94 +1231,107 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   headerTitle: {
-    color: 'white',
+    color: '#0f172a',
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '800',
+    letterSpacing: -0.3,
   },
   activePill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    backgroundColor: '#ecfdf5',
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 5,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.3)',
+    borderColor: '#a7f3d0',
   },
   statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#10b981',
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: '#059669',
     marginRight: 6,
   },
   pillText: {
-    color: '#10b981',
+    color: '#047857',
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   mainContent: {
     flex: 1,
+    backgroundColor: '#f8fafc',
   },
   scrollContainer: {
     padding: 16,
   },
   card: {
-    backgroundColor: 'rgba(18, 19, 26, 0.7)',
-    borderRadius: 14,
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: '#e2e8f0',
     padding: 16,
-    marginBottom: 20,
+    marginBottom: 16,
+    shadowColor: '#64748b',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 2,
   },
   cardTitle: {
-    color: 'white',
+    color: '#0f172a',
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '700',
     marginTop: 8,
   },
   cardSubText: {
-    color: '#9ca3af',
+    color: '#64748b',
     fontSize: 13,
     marginTop: 4,
   },
   primaryBtn: {
-    backgroundColor: '#a855f7',
+    backgroundColor: '#7c3aed',
     paddingVertical: 12,
-    borderRadius: 8,
+    paddingHorizontal: 16,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
+    shadowColor: '#7c3aed',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
   },
   btnText: {
-    color: 'white',
+    color: '#ffffff',
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   avatarGlow: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: '#f1f5f9',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.3)',
+    borderColor: '#cbd5e1',
     marginBottom: 16,
   },
   incomingNumber: {
-    color: 'white',
+    color: '#0f172a',
     fontSize: 22,
     fontWeight: 'bold',
   },
   alertText: {
-    color: '#ef4444',
+    color: '#dc2626',
     fontSize: 14,
     fontWeight: 'bold',
     marginTop: 8,
   },
   alertLabel: {
-    color: '#9ca3af',
+    color: '#64748b',
     fontSize: 12,
     textAlign: 'center',
     marginTop: 8,
@@ -1322,7 +1340,7 @@ const styles = StyleSheet.create({
   callButtonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginTop: 30,
+    marginTop: 24,
   },
   roundBtn: {
     width: 60,
@@ -1330,29 +1348,34 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 3,
   },
   declineBtn: {
-    backgroundColor: '#ef4444',
+    backgroundColor: '#dc2626',
   },
   acceptBtn: {
-    backgroundColor: '#10b981',
+    backgroundColor: '#059669',
   },
   activeNumber: {
-    color: 'white',
+    color: '#0f172a',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   dangerPill: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   transcriptBox: {
     height: 240,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    borderRadius: 8,
+    backgroundColor: '#f8fafc',
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
-    marginVertical: 15,
+    borderColor: '#e2e8f0',
+    marginVertical: 12,
   },
   transcriptLine: {
     fontSize: 13,
@@ -1360,10 +1383,12 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   scammerLine: {
-    color: '#fda4af',
+    color: '#991b1b',
+    fontWeight: '600',
   },
   userLine: {
-    color: '#93c5fd',
+    color: '#065f46',
+    fontWeight: '600',
     textAlign: 'right',
   },
   statusBadgeRow: {
@@ -1376,90 +1401,103 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   replyChip: {
-    backgroundColor: '#1f2937',
-    borderColor: '#374151',
+    backgroundColor: '#f1f5f9',
+    borderColor: '#cbd5e1',
     borderWidth: 1,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 14,
-    marginRight: 6,
+    borderRadius: 16,
+    marginRight: 8,
   },
   replyChipText: {
-    color: '#38bdf8',
+    color: '#6d28d9',
     fontSize: 12,
+    fontWeight: '600',
   },
   reportBox: {
-    backgroundColor: 'rgba(255,255,255,0.02)',
+    backgroundColor: '#f8fafc',
     padding: 12,
-    borderRadius: 8,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: '#e2e8f0',
   },
   reportHeader: {
-    color: '#a855f7',
+    color: '#7c3aed',
     fontSize: 12,
     fontWeight: 'bold',
     marginBottom: 6,
   },
   reportItem: {
-    color: '#d1d5db',
+    color: '#334155',
     fontSize: 13,
     paddingVertical: 2,
   },
   chatContainer: {
     flex: 1,
-    backgroundColor: '#0b141a',
+    backgroundColor: '#efeae2',
   },
   chatArea: {
     flex: 1,
     padding: 16,
   },
   chatBubble: {
-    maxWidth: '80%',
-    padding: 10,
-    borderRadius: 10,
-    marginBottom: 12,
+    maxWidth: '82%',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 10,
+    shadowColor: '#64748b',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   chatImagePreview: {
-    width: 200,
+    width: 210,
     height: 140,
     borderRadius: 8,
     marginBottom: 6,
   },
   botBubble: {
-    backgroundColor: '#202c33',
+    backgroundColor: '#ffffff',
     alignSelf: 'flex-start',
     borderTopLeftRadius: 0,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   userBubble: {
-    backgroundColor: '#005c4b',
+    backgroundColor: '#dcf8c6',
     alignSelf: 'flex-end',
     borderTopRightRadius: 0,
+    borderWidth: 1,
+    borderColor: '#b7e4a1',
   },
   bubbleText: {
-    color: '#e9edef',
+    color: '#111b21',
     fontSize: 14,
     lineHeight: 20,
   },
   bubbleTime: {
-    color: '#8696a0',
-    fontSize: 9,
+    color: '#667781',
+    fontSize: 10,
     textAlign: 'right',
     marginTop: 4,
   },
   chatInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1f2c34',
-    padding: 10,
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#e2e8f0',
   },
   attachBtn: {
     padding: 8,
   },
   chatInput: {
     flex: 1,
-    backgroundColor: '#2a3942',
-    color: '#d1d7db',
+    backgroundColor: '#f0f2f5',
+    color: '#111b21',
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 8,
@@ -1475,19 +1513,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   scenarioSelectBtn: {
-    backgroundColor: '#1f2937',
-    padding: 10,
-    borderRadius: 8,
+    backgroundColor: '#f8fafc',
+    padding: 12,
+    borderRadius: 10,
     marginVertical: 4,
     borderWidth: 1,
-    borderColor: '#374151',
+    borderColor: '#e2e8f0',
   },
   scenarioSelectBtnActive: {
-    backgroundColor: 'rgba(168, 85, 247, 0.2)',
-    borderColor: '#a855f7',
+    backgroundColor: '#f3e8ff',
+    borderColor: '#7c3aed',
   },
   scenarioSelectText: {
-    color: '#9ca3af',
+    color: '#334155',
     fontSize: 13,
   },
   liveCallerBox: {
@@ -1497,21 +1535,21 @@ const styles = StyleSheet.create({
   },
   liveCallerInput: {
     flex: 1,
-    backgroundColor: '#1f2937',
-    color: 'white',
+    backgroundColor: '#ffffff',
+    color: '#0f172a',
     borderRadius: 8,
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 9,
     fontSize: 13,
     borderWidth: 1,
-    borderColor: '#374151',
+    borderColor: '#cbd5e1',
   },
   sendCallerBtn: {
-    backgroundColor: '#a855f7',
-    width: 36,
-    height: 36,
+    backgroundColor: '#7c3aed',
+    width: 38,
+    height: 38,
     borderRadius: 8,
-    justifyContent: 'center',
+    justify.content: 'center',
     alignItems: 'center',
     marginLeft: 8,
   },
@@ -1523,7 +1561,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     marginVertical: 15,
     borderWidth: 2,
-    borderColor: '#a855f7',
+    borderColor: '#7c3aed',
   },
   cameraPreview: {
     flex: 1,
@@ -1532,15 +1570,15 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 180,
     borderRadius: 12,
-    backgroundColor: '#1f2937',
+    backgroundColor: '#f8fafc',
     justifyContent: 'center',
     alignItems: 'center',
     marginVertical: 15,
     borderWidth: 2,
-    borderColor: '#a855f7',
+    borderColor: '#7c3aed',
   },
   mockCamText: {
-    color: '#6b7280',
+    color: '#64748b',
     fontSize: 12,
     marginTop: 8,
   },
@@ -1549,7 +1587,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 2,
-    backgroundColor: '#a855f7',
+    backgroundColor: '#7c3aed',
     top: '50%',
   },
   focusGuides: {
@@ -1559,21 +1597,21 @@ const styles = StyleSheet.create({
     left: 20,
     right: 20,
     borderWidth: 2,
-    borderColor: '#a855f7',
+    borderColor: '#7c3aed',
     borderRadius: 8,
   },
   cvRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 4,
+    paddingVertical: 6,
   },
   cvBadge: {
     fontSize: 12,
     fontWeight: 'bold',
   },
   verdictContainer: {
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    backgroundColor: '#ecfdf5',
     borderWidth: 1,
     borderColor: '#10b981',
     borderRadius: 8,
@@ -1582,16 +1620,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   verdictText: {
-    color: '#10b981',
+    color: '#047857',
     fontWeight: 'bold',
     fontSize: 13,
   },
   bottomNav: {
     flexDirection: 'row',
-    height: 56,
+    height: 60,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)',
-    backgroundColor: '#12131a',
+    borderTopColor: '#e2e8f0',
+    backgroundColor: '#ffffff',
   },
   navBtn: {
     flex: 1,
@@ -1600,23 +1638,24 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   navBtnActive: {
-    backgroundColor: 'rgba(168,85,247,0.03)',
+    backgroundColor: '#f8fafc',
   },
   navLabel: {
-    color: '#9ca3af',
-    fontSize: 10,
+    color: '#64748b',
+    fontSize: 11,
+    fontWeight: '500',
   },
   navLabelActive: {
-    color: '#a855f7',
-    fontWeight: '600',
+    color: '#7c3aed',
+    fontWeight: '700',
   },
   roleBar: {
     flexDirection: 'row',
-    backgroundColor: '#161822',
+    backgroundColor: '#f1f5f9',
     padding: 6,
     gap: 8,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)'
+    borderBottomColor: '#e2e8f0',
   },
   roleBtn: {
     flex: 1,
@@ -1626,220 +1665,233 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 8,
     gap: 6,
-    backgroundColor: 'rgba(255,255,255,0.03)'
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   roleBtnActive: {
-    backgroundColor: 'rgba(168, 85, 247, 0.15)',
-    borderWidth: 1,
-    borderColor: '#a855f7'
+    backgroundColor: '#7c3aed',
+    borderColor: '#6d28d9',
   },
   roleBtnActivePolice: {
-    backgroundColor: 'rgba(59, 130, 246, 0.15)',
-    borderWidth: 1,
-    borderColor: '#3b82f6'
+    backgroundColor: '#2563eb',
+    borderColor: '#1d4ed8',
   },
   roleText: {
-    color: '#9ca3af',
+    color: '#475569',
     fontSize: 12,
-    fontWeight: '500'
+    fontWeight: '600',
   },
   roleTextActive: {
-    color: '#c084fc',
-    fontWeight: 'bold'
+    color: '#ffffff',
+    fontWeight: 'bold',
   },
   roleTextActivePolice: {
-    color: '#60a5fa',
-    fontWeight: 'bold'
+    color: '#ffffff',
+    fontWeight: 'bold',
   },
   exportBannerBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(168, 85, 247, 0.1)',
+    backgroundColor: '#f3e8ff',
     borderWidth: 1,
-    borderColor: 'rgba(168, 85, 247, 0.3)',
+    borderColor: '#7c3aed',
     paddingVertical: 10,
     marginHorizontal: 12,
     marginTop: 10,
-    borderRadius: 8
+    borderRadius: 8,
   },
   exportBannerText: {
-    color: '#c084fc',
+    color: '#6d28d9',
     fontSize: 13,
-    fontWeight: 'bold'
+    fontWeight: 'bold',
   },
   statsRow: {
     flexDirection: 'row',
     gap: 12,
-    marginVertical: 12
+    marginVertical: 12,
   },
   statBox: {
     flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: '#ffffff',
     padding: 12,
-    borderRadius: 8,
+    borderRadius: 10,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)'
+    borderColor: '#e2e8f0',
+    shadowColor: '#64748b',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
   },
   statValue: {
     fontSize: 22,
-    fontWeight: 'bold'
+    fontWeight: 'bold',
+    color: '#0f172a',
   },
   statLabel: {
-    color: '#9ca3af',
+    color: '#64748b',
     fontSize: 11,
-    marginTop: 2
+    marginTop: 2,
   },
   ringCard: {
-    backgroundColor: 'rgba(239, 68, 68, 0.08)',
+    backgroundColor: '#fef2f2',
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.3)',
+    borderColor: '#fca5a5',
     padding: 12,
-    borderRadius: 8,
-    marginVertical: 8
+    borderRadius: 10,
+    marginVertical: 8,
   },
   ringTitle: {
-    color: '#ef4444',
+    color: '#dc2626',
     fontWeight: 'bold',
-    fontSize: 13
+    fontSize: 13,
   },
   ringSub: {
-    color: '#fca5a5',
+    color: '#991b1b',
     fontSize: 11,
-    marginTop: 4
+    marginTop: 4,
   },
   nodeItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    padding: 10,
-    borderRadius: 6,
-    marginVertical: 4
+    backgroundColor: '#ffffff',
+    padding: 12,
+    borderRadius: 8,
+    marginVertical: 4,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   nodeAccount: {
-    color: 'white',
+    color: '#0f172a',
     fontSize: 13,
-    fontWeight: '600'
+    fontWeight: '600',
   },
   nodeBank: {
-    color: '#9ca3af',
-    fontSize: 11
+    color: '#64748b',
+    fontSize: 11,
   },
   riskPill: {
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 12
+    borderRadius: 12,
   },
   riskText: {
     color: 'white',
     fontSize: 10,
-    fontWeight: 'bold'
+    fontWeight: 'bold',
   },
   muleCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    backgroundColor: '#ffffff',
     padding: 12,
-    borderRadius: 8,
+    borderRadius: 10,
     marginVertical: 6,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)'
+    borderColor: '#e2e8f0',
   },
   muleAcc: {
-    color: 'white',
+    color: '#0f172a',
     fontWeight: 'bold',
-    fontSize: 14
+    fontSize: 14,
   },
   muleBank: {
-    color: '#9ca3af',
+    color: '#64748b',
     fontSize: 11,
-    marginTop: 2
+    marginTop: 2,
   },
   freezeBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ef4444',
+    backgroundColor: '#dc2626',
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 6
+    borderRadius: 6,
   },
   freezeBtnText: {
     color: 'white',
     fontSize: 12,
-    fontWeight: 'bold'
+    fontWeight: 'bold',
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.8)',
+    backgroundColor: 'rgba(15, 23, 42, 0.6)',
     justifyContent: 'center',
-    padding: 20
+    padding: 20,
   },
   modalCard: {
-    backgroundColor: '#161822',
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)'
+    borderColor: '#e2e8f0',
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 5,
   },
   modalTitle: {
-    color: 'white',
+    color: '#0f172a',
     fontSize: 16,
-    fontWeight: 'bold'
+    fontWeight: 'bold',
   },
   modalInput: {
-    backgroundColor: '#0f111a',
+    backgroundColor: '#f8fafc',
     borderRadius: 8,
     padding: 12,
-    color: 'white',
+    color: '#0f172a',
     fontSize: 12,
     textAlignVertical: 'top',
     marginVertical: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)'
+    borderColor: '#cbd5e1',
   },
   sampleChatBtn: {
-    backgroundColor: 'rgba(168, 85, 247, 0.15)',
+    backgroundColor: '#f3e8ff',
     paddingVertical: 8,
     borderRadius: 6,
     alignItems: 'center',
-    marginBottom: 10
+    marginBottom: 10,
   },
   sampleChatBtnText: {
-    color: '#c084fc',
+    color: '#6d28d9',
     fontSize: 12,
-    fontWeight: '600'
+    fontWeight: '600',
   },
   verdictBox: {
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    backgroundColor: '#fef2f2',
     borderWidth: 1,
-    borderColor: '#ef4444',
+    borderColor: '#fca5a5',
     borderRadius: 8,
     padding: 12,
-    marginTop: 12
+    marginTop: 12,
   },
   verdictTitle: {
-    color: '#ef4444',
+    color: '#dc2626',
     fontWeight: 'bold',
-    fontSize: 13
+    fontSize: 13,
   },
   verdictPatterns: {
-    color: '#fca5a5',
+    color: '#991b1b',
     fontSize: 11,
     fontWeight: '600',
-    marginTop: 4
+    marginTop: 4,
   },
   verdictReason: {
-    color: '#d1d5db',
+    color: '#334155',
     fontSize: 11,
-    marginTop: 4
+    marginTop: 4,
   },
   verdictAction: {
-    color: '#34d399',
+    color: '#059669',
     fontSize: 11,
     fontWeight: 'bold',
-    marginTop: 6
-  }
+    marginTop: 6,
+  },
 });
