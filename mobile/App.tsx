@@ -10,7 +10,8 @@ import {
   Vibration,
   Platform,
   ActivityIndicator,
-  Dimensions
+  Dimensions,
+  Image
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -102,7 +103,7 @@ export default function App() {
   const dialogueTimerRef = useRef<any>(null);
 
   // WhatsApp Chat State
-  const [waMessages, setWaMessages] = useState<{ sender: 'bot' | 'user'; text: string; time: string }[]>([
+  const [waMessages, setWaMessages] = useState<{ sender: 'bot' | 'user'; text: string; time: string; imageUri?: string }[]>([
     { sender: 'bot', text: 'Jai Hind! I am RakshaBot, your Digital Public Safety Assistant.\n\nSend me questions or paste suspicious chats to evaluate threat indices.', time: '14:40' }
   ]);
   const [waInput, setWaInput] = useState('');
@@ -349,7 +350,12 @@ export default function App() {
 
       setWaMessages(prev => [
         ...prev,
-        { sender: 'user', text: `📷 [Uploaded File: ${asset.name}]`, time: timeString }
+        { 
+          sender: 'user', 
+          text: `📷 ${asset.name || 'Uploaded Screenshot'}`, 
+          imageUri: asset.uri,
+          time: timeString 
+        }
       ]);
 
       const formData = new FormData();
@@ -698,14 +704,12 @@ export default function App() {
         {/* Tab 2: CITIZEN SHIELD WHATSAPP */}
         {activeTab === 'whatsapp' && (
           <View style={styles.chatContainer}>
-            <TouchableOpacity style={styles.exportBannerBtn} onPress={() => setChatModalOpen(true)}>
-              <FileText size={16} color="#a855f7" style={{ marginRight: 6 }} />
-              <Text style={styles.exportBannerText}>📄 Scan Exported WhatsApp Chat (.txt)</Text>
-            </TouchableOpacity>
-
             <ScrollView style={styles.chatArea} contentContainerStyle={{ paddingBottom: 20 }}>
               {waMessages.map((msg, idx) => (
                 <View key={idx} style={[styles.chatBubble, msg.sender === 'user' ? styles.userBubble : styles.botBubble]}>
+                  {msg.imageUri ? (
+                    <Image source={{ uri: msg.imageUri }} style={styles.chatImagePreview} resizeMode="cover" />
+                  ) : null}
                   <Text style={styles.bubbleText}>{msg.text}</Text>
                   <Text style={styles.bubbleTime}>{msg.time}</Text>
                 </View>
@@ -1160,6 +1164,12 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 10,
     marginBottom: 12,
+  },
+  chatImagePreview: {
+    width: 200,
+    height: 140,
+    borderRadius: 8,
+    marginBottom: 6,
   },
   botBubble: {
     backgroundColor: '#202c33',
