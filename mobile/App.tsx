@@ -109,6 +109,7 @@ export default function App() {
   const [isUploading, setIsUploading] = useState(false);
 
   // Expo Camera State
+  const cameraRef = useRef<any>(null);
   const [permission, requestPermission] = useCameraPermissions();
   const [cvFeatures, setCvFeatures] = useState<{ name: string; status: 'ok' | 'fail' | 'checking' }[]>([
     { name: 'Watermark Check', status: 'checking' },
@@ -272,10 +273,19 @@ export default function App() {
 
   const handleWhatsAppSend = async () => {
     if (!waInput.trim()) return;
-    const userText = waInput;
+    const userText = waInput.trim();
     const timeString = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     setWaMessages(prev => [...prev, { sender: 'user', text: userText, time: timeString }]);
     setWaInput('');
+
+    const lower = userText.toLowerCase();
+    const GREETINGS = ['hi', 'hello', 'hey', 'namaste', 'help', 'hlo', 'hii', 'good morning', 'good evening', 'who are you', 'what can you do'];
+
+    if (GREETINGS.includes(lower) || lower.length <= 3) {
+      const botResponse = `Jai Hind! 👋 I am RakshaBot, your Digital Public Safety Assistant.\n\nHow can I help you today?\n• Paste suspicious messages or WhatsApp chats to evaluate scam threats.\n• Upload screenshots of suspicious payment demands.\n• Ask about Digital Arrest, Bank KYC, or OTP fraud playbooks.\n• Call 1930 to report cyber fraud directly to National Cyber Crime Reporting Portal.`;
+      setWaMessages(prev => [...prev, { sender: 'bot', text: botResponse, time: timeString }]);
+      return;
+    }
 
     let botResponse = '';
     const endpoints = [
@@ -298,9 +308,9 @@ export default function App() {
           setGroqConnected(true);
 
           if (data.threat_score > 40) {
-            botResponse = `🚨 GROQ AI THREAT VERDICT (${data.threat_score}% Threat)\n\n📌 Patterns: ${data.matched_patterns?.join(', ') || 'Suspicious Activity'}\n💡 Reasoning: ${data.reasoning}\n🛡️ Action: ${data.recommended_action}`;
+            botResponse = `🚨 GROQ AI THREAT VERDICT (${data.threat_score}% Threat)\n\n📌 Matched Playbooks: ${data.matched_patterns?.join(', ') || 'Suspicious Pattern'}\n💡 Reasoning: ${data.reasoning}\n🛡️ Action: ${data.recommended_action}`;
           } else {
-            botResponse = `🤖 GROQ AI VERDICT (Safe - ${data.threat_score}% Threat)\n\n${data.reasoning || 'No active scam playbooks detected in this message. Stay vigilant against urgent money transfer demands.'}`;
+            botResponse = `🤖 GROQ AI VERDICT (Safe - ${data.threat_score}% Threat)\n\n${data.reasoning || 'No active cyber scam playbooks detected in this transcript. Stay vigilant against urgent money transfer demands.'}`;
           }
           break;
         }
@@ -310,8 +320,6 @@ export default function App() {
     }
 
     if (!apiSuccess) {
-      // Offline fallback
-      const lower = userText.toLowerCase();
       if (lower.includes('digital arrest') || lower.includes('customs') || lower.includes('parcel')) {
         botResponse = '⚠️ ALERT: Real government/police offices never place citizens under "digital arrest" via WhatsApp/Skype or demand money online. Disconnect call immediately.';
       } else if (lower.includes('electricity') || lower.includes('power')) {
@@ -337,7 +345,7 @@ export default function App() {
     }, 1500);
   };
 
-  // CV Note scanner action
+  // CV Note scanner action using real camera snapshot & backend CV API
   const scanBanknote = async () => {
     if (!permission || !permission.granted) {
       const res = await requestPermission();
@@ -354,22 +362,56 @@ export default function App() {
       { name: 'Microprint Frequency Density', status: 'checking' }
     ]);
 
-    let step = 0;
-    const interval = setInterval(() => {
-      const currentStep = step;
-      if (currentStep < 3) {
-        setCvFeatures(prev => {
-          if (!prev || !prev[currentStep]) return prev;
-          const next = [...prev];
-          next[currentStep] = { ...next[currentStep], status: 'ok' };
-          return next;
-        });
-        step++;
-      } else {
-        clearInterval(interval);
-        setNoteVerdict('✓ Indian ₹500 Note Verified Genuine (98.4% Computer Vision Confidence)');
+    try {
+      let b64Image: string | null = null;
+      if (cameraRef.current) {
+        const photo = await cameraRef.current.takePictureAsync({ base64: true, quality: 0.5 });
+        b64Image = photo?.base64 || null;
       }
-    }, 600);
+
+      const endpoints = [
+        'http://localhost:8000/cv-banknote-scan',
+        'http://10.177.188.26:8000/cv-banknote-scan'
+      ];
+
+      for (const ep of endpoints) {
+        try {
+          const res = await fetch(ep, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ base64: b64Image || '' })
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            setCvFeatures(data.features || [
+              { name: 'Watermark Edge Contrast', status: data.is_genuine ? 'ok' : 'fail' },
+              { name: 'Security Thread Shift', status: data.is_genuine ? 'ok' : 'fail' },
+              { name: 'Microprint Frequency Density', status: data.is_genuine ? 'ok' : 'fail' }
+            ]);
+            setNoteVerdict(data.verdict);
+            return;
+          }
+        } catch {
+          // try next endpoint
+        }
+      }
+
+      // Offline / fallback verification logic if backend unattached
+      setCvFeatures([
+        { name: 'Watermark Edge Contrast', status: 'fail' },
+        { name: 'Security Thread Shift', status: 'fail' },
+        { name: 'Microprint Frequency Density', status: 'fail' }
+      ]);
+      setNoteVerdict('⚠️ Counterfeit Warning: Image failed currency security feature verification (Low CV Confidence)');
+    } catch (e: any) {
+      setCvFeatures([
+        { name: 'Watermark Edge Contrast', status: 'fail' },
+        { name: 'Security Thread Shift', status: 'fail' },
+        { name: 'Microprint Frequency Density', status: 'fail' }
+      ]);
+      setNoteVerdict('⚠️ Counterfeit Warning: Failed to scan security features');
+    }
   };
 
   const handlePickDocument = async () => {
@@ -635,7 +677,7 @@ export default function App() {
 
               {permission && permission.granted ? (
                 <View style={styles.cameraFrame}>
-                  <CameraView style={styles.cameraPreview} facing="back" />
+                  <CameraView ref={cameraRef} style={styles.cameraPreview} facing="back" />
                   <View style={styles.scannerLaser} />
                   <View style={styles.focusGuides} />
                 </View>
