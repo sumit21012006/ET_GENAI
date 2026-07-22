@@ -62,3 +62,18 @@ async def process_call_chunk(audio: UploadFile = File(...), call_id: str | None 
     result = await _run_evaluation(transcript, call_id)
     result["transcript"] = transcript
     return result
+
+
+class CallTurnRequest(BaseModel):
+    user_message: str
+    history: str = ""
+    scenario_type: str = "Digital Arrest"
+
+
+@router.post("/simulate-call-turn")
+async def simulate_call_turn(body: CallTurnRequest):
+    """
+    Generate dynamic AI scammer reply based on victim input + return live threat score.
+    """
+    from lib.groq_client import simulate_scammer_turn
+    return simulate_scammer_turn(body.history, body.user_message, body.scenario_type)

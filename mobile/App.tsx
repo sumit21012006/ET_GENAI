@@ -264,65 +264,89 @@ export default function App() {
     }
   };
 
-  const speakScammerStep = (stepIdx: number) => {
+  const sendUserReply = async (replyText: string) => {
+    if (!replyText.trim()) return;
+    const userLine = replyText.trim();
+    
+    const updatedHistory = [...callTranscript, { speaker: 'user' as const, text: userLine }];
+    setCallTranscript(updatedHistory);
+    setIsWaitingForUser(false);
+    setIsSpeaking(true);
+    setLiveCallerText('');
+
     const scenario = CALL_SCENARIOS[selectedScenarioIndex] || CALL_SCENARIOS[0];
-    if (stepIdx >= scenario.dialogue.length) return;
+    const historyString = updatedHistory.map(t => `${t.speaker === 'scammer' ? 'Caller' : 'Victim'}: ${t.text}`).join('\n');
 
-    const currentLine = scenario.dialogue[stepIdx];
-    if (currentLine.speaker === 'scammer') {
-      setIsSpeaking(true);
-      setIsWaitingForUser(false);
-      setCallTranscript(prev => [...prev, { speaker: 'scammer', text: currentLine.text }]);
-      checkScamContent(currentLine.text);
+    const endpoints = getEndpoints('/simulate-call-turn');
 
+    for (const ep of endpoints) {
       try {
-        Speech.stop();
-        Speech.speak(currentLine.text, {
-          language: 'en-IN',
-          rate: 1.05,
-          pitch: 1.0,
-          onDone: () => {
-            setIsSpeaking(false);
-            setIsWaitingForUser(true);
-          },
-          onError: () => {
+        const res = await fetch(ep, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_message: userLine,
+            history: historyString,
+            scenario_type: scenario.name
+          })
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          setGroqConnected(true);
+
+          if (data.threat_score !== undefined) {
+            setScamScore(data.threat_score);
+          }
+          if (data.matched_patterns && data.matched_patterns.length > 0) {
+            setDetectedIndicators(data.matched_patterns);
+          }
+
+          const scammerLine = data.next_scammer_line || "You are under investigation. Follow instructions immediately.";
+          setCallTranscript(prev => [...prev, { speaker: 'scammer', text: scammerLine }]);
+
+          try {
+            Speech.stop();
+            Speech.speak(scammerLine, {
+              language: 'en-IN',
+              rate: 1.05,
+              pitch: 1.0,
+              onDone: () => {
+                setIsSpeaking(false);
+                setIsWaitingForUser(true);
+              },
+              onError: () => {
+                setIsSpeaking(false);
+                setIsWaitingForUser(true);
+              }
+            });
+          } catch {
             setIsSpeaking(false);
             setIsWaitingForUser(true);
           }
-        });
+          return;
+        }
       } catch {
-        setIsSpeaking(false);
-        setIsWaitingForUser(true);
-      }
-    }
-  };
-
-  const sendUserReply = (replyText: string) => {
-    if (!replyText.trim()) return;
-    const userLine = replyText.trim();
-    setCallTranscript(prev => [...prev, { speaker: 'user', text: userLine }]);
-    setIsWaitingForUser(false);
-    setIsSpeaking(false);
-    setLiveCallerText('');
-
-    // Advance to next scammer turn after 1.2s delay
-    const nextStep = dialogueStep + 1;
-    const scenario = CALL_SCENARIOS[selectedScenarioIndex] || CALL_SCENARIOS[0];
-
-    let foundNext = -1;
-    for (let i = nextStep; i < scenario.dialogue.length; i++) {
-      if (scenario.dialogue[i].speaker === 'scammer') {
-        foundNext = i;
-        break;
+        // try next endpoint
       }
     }
 
-    if (foundNext !== -1) {
-      setDialogueStep(foundNext);
-      setTimeout(() => {
-        speakScammerStep(foundNext);
-      }, 1200);
-    } else {
+    // Fallback if backend offline
+    const fallbackLine = "This is an official cyber alert. Cooperate immediately or face local police arrest.";
+    setCallTranscript(prev => [...prev, { speaker: 'scammer', text: fallbackLine }]);
+    try {
+      Speech.stop();
+      Speech.speak(fallbackLine, {
+        language: 'en-IN',
+        rate: 1.05,
+        pitch: 1.0,
+        onDone: () => {
+          setIsSpeaking(false);
+          setIsWaitingForUser(true);
+        }
+      });
+    } catch {
+      setIsSpeaking(false);
       setIsWaitingForUser(true);
     }
   };
@@ -349,11 +373,33 @@ export default function App() {
     setCallState('active');
     setDialogueStep(0);
     setIsWaitingForUser(false);
+    setIsSpeaking(true);
 
-    // Speak initial scammer line
-    setTimeout(() => {
-      speakScammerStep(0);
-    }, 400);
+    const scenario = CALL_SCENARIOS[selectedScenarioIndex] || CALL_SCENARIOS[0];
+    const initialLine = scenario.dialogue[0]?.text || "Hello, this is Inspector Cyber Police.";
+    
+    setCallTranscript([{ speaker: 'scammer', text: initialLine }]);
+    checkScamContent(initialLine);
+
+    try {
+      Speech.stop();
+      Speech.speak(initialLine, {
+        language: 'en-IN',
+        rate: 1.05,
+        pitch: 1.0,
+        onDone: () => {
+          setIsSpeaking(false);
+          setIsWaitingForUser(true);
+        },
+        onError: () => {
+          setIsSpeaking(false);
+          setIsWaitingForUser(true);
+        }
+      });
+    } catch {
+      setIsSpeaking(false);
+      setIsWaitingForUser(true);
+    }
   };
 
   // Auto-hangup checker

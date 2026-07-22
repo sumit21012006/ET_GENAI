@@ -82,3 +82,48 @@ def evaluate_transcript(transcript: str) -> dict:
                     "reasoning": f"LLM evaluation failed after 3 attempts: {str(e)}",
                     "recommended_action": "MONITOR",
                 }
+
+
+def simulate_scammer_turn(history_text: str, user_message: str, scenario_type: str = "Digital Arrest") -> dict:
+    """Generate dynamic AI scammer line + evaluate threat score live using Groq LLaMA 3.1."""
+    client = get_groq()
+    
+    prompt = f"""You are roleplaying as an Indian cyber scammer in a real-time call simulation for a fraud protection app demo.
+Scenario persona: {scenario_type}
+Conversation history so far:
+{history_text}
+
+Latest Victim Reply: "{user_message}"
+
+Instruction:
+1. Respond directly to the victim's reply in 1-2 realistic, intimidating spoken sentences as the scammer.
+2. Calculate the overall scam threat score (0-100%).
+
+Return ONLY a valid JSON object:
+{{
+  "next_scammer_line": "<1-2 realistic spoken sentences by scammer>",
+  "threat_score": <integer 0-100>,
+  "matched_patterns": ["{scenario_type}"]
+}}
+"""
+    try:
+        response = client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7,
+            max_tokens=256,
+        )
+        raw = response.choices[0].message.content or ""
+        raw = raw.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+        import json
+        res = json.loads(raw)
+        res["threat_score"] = max(0, min(100, int(res.get("threat_score", 75))))
+        return res
+    except Exception as e:
+        return {
+            "next_scammer_line": "This is a mandatory cyber investigation. You must comply immediately or face local police arrest.",
+            "threat_score": 85,
+            "matched_patterns": [scenario_type]
+        }
