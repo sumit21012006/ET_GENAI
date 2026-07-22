@@ -8,27 +8,38 @@ router = APIRouter()
 
 def process_banknote_cv(pil_img: Image.Image):
     pil_img = pil_img.convert("RGB")
-    img_np = np.array(pil_img)
+    w, h = pil_img.size
 
-    # 1. Feature Analysis: Security Thread & Color Channel Variance
+    # 1. Crop central Region of Interest (ROI) matching scanner reticle (75% width, 55% height)
+    crop_w = int(w * 0.75)
+    crop_h = int(h * 0.55)
+    left = (w - crop_w) // 2
+    top = (h - crop_h) // 2
+    right = left + crop_w
+    bottom = top + crop_h
+
+    roi_img = pil_img.crop((left, top, right, bottom))
+    img_np = np.array(roi_img)
+
+    # 2. Feature Analysis: Security Thread & Color Channel Variance on cropped banknote ROI
     r, g, b = img_np[:, :, 0], img_np[:, :, 1], img_np[:, :, 2]
     green_red_diff = np.abs(g.astype(np.float32) - r.astype(np.float32))
     color_std = float(np.std(green_red_diff))
-    # Real camera snapshots of currency show distinct color channel std dev
-    security_thread_ok = color_std >= 5.0
+    # Genuine banknote surfaces exhibit distinct spatial color channel variance
+    security_thread_ok = color_std >= 4.2
 
-    # 2. Feature Analysis: Watermark Edge Contrast & Density (Sobel Filter)
-    gray_img = pil_img.convert("L")
+    # 3. Feature Analysis: Watermark Edge Contrast & Density on cropped ROI
+    gray_img = roi_img.convert("L")
     edges = gray_img.filter(ImageFilter.FIND_EDGES)
     edge_array = np.array(edges)
     edge_mean = float(np.mean(edge_array))
     edge_std = float(np.std(edge_array))
     
-    # Currency notes have structured pattern edges (Ashoka Pillar, serial numbers, denomination marks)
-    watermark_ok = edge_mean >= 5.0 and edge_std >= 8.0
+    # Currency notes have precise high-frequency pattern boundaries
+    watermark_ok = edge_mean >= 4.0 and edge_std >= 6.5
 
-    # 3. Microprint Line Frequency Density
-    microprint_ok = edge_std >= 10.0 or color_std >= 6.0
+    # 4. Microprint Line Frequency Density
+    microprint_ok = edge_std >= 8.5 or color_std >= 5.0
 
     features = [
         {"name": "Watermark Edge Contrast", "status": "ok" if watermark_ok else "fail"},
