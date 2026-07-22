@@ -6,6 +6,7 @@ from routes.transcribe import router as transcribe_router
 from routes.evaluate import router as evaluate_router
 from routes.ocr import router as ocr_router
 from routes.fraud_graph import router as fraud_graph_router
+from routes.banknote import router as banknote_router
 from lib.config import PORT
 
 app = FastAPI(
@@ -33,6 +34,7 @@ app.include_router(transcribe_router, tags=["ASR"])
 app.include_router(evaluate_router, tags=["AI Evaluation"])
 app.include_router(ocr_router, tags=["OCR"])
 app.include_router(fraud_graph_router, tags=["Fraud Graph"])
+app.include_router(banknote_router, tags=["Counterfeit CV"])
 
 
 @app.get("/health", tags=["System"])
