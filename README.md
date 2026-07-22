@@ -1,12 +1,23 @@
-# RakshaNet Unified: AI-Powered Digital Public Safety & Cyber Fraud Prevention Platform
+# 🛡️ RakshaNet: Unified AI-Powered Digital Public Safety & Cyber Fraud Prevention Platform
 
-RakshaNet Unified is an end-to-end digital public safety platform designed to protect citizens against Indian cybercrime threat vectors, including **Digital Arrest Scams**, **Utility Bill Disconnection Frauds**, **Bank KYC / OTP Exploits**, and **Counterfeit Currency Notes**.
+> **Economic Times AI Hackathon 2026**
+> *Problem Statement PS6: Digital Public Safety — Protecting Indian Citizens from Cyber Fraud in Real-Time*
 
-The system combines a mobile application for citizens, an administrative center for law enforcement officers, real-time AI audio/text evaluation, computer vision feature extraction, and graph-based money laundering ring detection.
+---
+
+## 📌 Executive Summary
+
+India loses over **₹1,750 Crore annually** to digital cybercrime, with threat types like *Digital Arrest Scams*, *Utility Bill Disconnection Frauds*, *Bank KYC / OTP Exploits*, and *Counterfeit Currency Notes* trapping thousands of citizens daily.
+
+**RakshaNet** is a proactive, AI-first public safety platform that transitions cybersecurity from *reactive reporting* to *real-time defense*. It operates a dual-app architecture:
+1. **Citizen Mobile App (`/mobile`)**: A React Native (Expo) app providing live call screening, WhatsApp chat/screenshot auditing, and camera-based counterfeit note verification.
+2. **Admin Command Center (`/admin`)**: A Vite-React web app for law enforcement and bank analysts to monitor real-time alerts, visualize transaction networks, and detect money laundering rings.
 
 ---
 
 ## 🏛️ System Architecture & Workflow
+
+![System Architecture](./assets/system_architecture_1784739287874.png)
 
 ```mermaid
 flowchart TD
@@ -40,30 +51,80 @@ flowchart TD
     Router_Graph -->|"Query Mule Nodes & DFS Cycles"| DB_Supabase
 ```
 
+```
+┌──────────────────────────────────────────────┐
+│            CITIZEN TOUCHPOINTS               │
+│  📱 Mobile App (Expo)  │  💬 WhatsApp Bot    │
+└───────────────┬─────────────────┬────────────┘
+                │                 │
+                ▼                 ▼
+┌──────────────────────────────────────────────┐
+│          FASTAPI BACKEND (Python)             │
+│  /transcribe  /evaluate-script  /ocr          │
+│  /process-call-chunk  /fraud-graph            │
+└────────────────────┬─────────────────────────┘
+          ┌──────────┴──────────┐
+          ▼                     ▼
+┌─────────────────┐   ┌─────────────────────────┐
+│  GROQ AI CLOUD  │   │  SUPABASE (PostgreSQL)   │
+│  Whisper STT    │   │  alerts / mule_accounts  │
+│  Llama 3 NLP    │   │  transactions / realtime │
+└─────────────────┘   └────────────┬────────────┘
+                                   │ Realtime WebSocket
+                                   ▼
+                    ┌──────────────────────────┐
+                    │  ADMIN COMMAND CENTER    │
+                    │  Vite + React Dashboard  │
+                    │  vis-network Fraud Graph │
+                    │  Geospatial Hotspot Map  │
+                    └──────────────────────────┘
+```
+
 ---
 
-## 🚀 Key Modules & Technical Implementation
+## 🎯 Core Features & Technical Implementation
 
 ### 1. 📞 Real-Time Call Screening & Intercept Agent
-- **Turn-Based AI Voice Engine**: Synthesizes incoming caller speech using `expo-speech` while listening for citizen response.
-- **Dynamic Scam Escalation**: Integrates `/simulate-call-turn` on Groq LLaMA 3.1 to generate live scammer dialog turns based on citizen replies.
-- **Automated Intercept**: Evaluates threat indices on every turn. When threat probability exceeds $88\%$, the app triggers warning vibration patterns and terminates the call connection, presenting an explainable threat audit report.
+*   **Speech-to-Text**: Captures live call audio chunks from the microphone and streams them to Groq's **Whisper-large-v3** for transcription in `<200ms`.
+*   **Turn-Based AI Voice Engine**: Synthesizes incoming caller speech using `expo-speech` while listening for citizen response.
+*   **Dynamic Scam Escalation**: Integrates `/simulate-call-turn` on Groq LLaMA 3.1 to generate live scammer dialog turns based on citizen replies.
+*   **Automated Intercept**: Evaluates threat indices on every turn. When threat probability exceeds **80%** (or $88\%$ depending on tuning), the system triggers a native phone vibration pattern and **auto-disconnects** the call to protect the user from coerced transactions, presenting an explainable threat audit report.
 
-### 2. 💬 WhatsApp Public Safety Assistant & Screenshot OCR
-- **Natural Language Inquiry**: Answers citizen queries in English/Hindi regarding digital security.
-- **In-Chat Thumbnail Previews**: Renders uploaded attachment thumbnails directly inside message bubbles.
-- **Tesseract OCR Engine**: Extracts structured text from uploaded WhatsApp chat screenshots and runs threat heuristic pattern matching against known Indian cybercrime playbooks.
+![Call Screening Dashboard](./assets/dashboard_call_screening_1784739214727.png)
 
-### 3. 💵 Computer Vision Counterfeit Banknote Authenticator
-- **2.2:1 Currency Viewfinder**: Aligns the camera frame to standard Indian banknote proportions (₹500 / ₹200 / ₹100).
-- **Central ROI Cropping**: Automatically crops the central 75% width × 55% height Region of Interest (ROI) to eliminate background table/room noise.
-- **Spatial Feature Analysis**:
-  - **Security Thread Shift**: Computes RGB color channel variance ($std(G - R) \ge 4.2$) across metallic thread regions.
-  - **Watermark & Intaglio Edge Contrast**: Applies Sobel edge filter analysis ($mean \ge 4.0$, $std \ge 6.5$) to verify Gandhi portrait watermarks and micro-text line density.
+---
 
-### 4. 🛡️ Police Admin Center (RBAC)
-- **Mule Ring Graph Center**: Applies Depth-First Search (DFS) cycle detection across bank transfer nodes to highlight circular money laundering loops.
-- **Mule Account Registry**: Provides law enforcement with 1-click emergency lien hold signals to freeze compromised bank accounts.
+### 2. 💬 WhatsApp Chat & Screenshot OCR Audit
+*   **Chatpaste Analyzer**: Allows users to copy-paste suspicious conversation logs directly to **RakshaBot** for a natural language digital security audit (supporting English/Hindi).
+*   **In-Chat Thumbnail Previews**: Renders uploaded attachment thumbnails directly inside message bubbles.
+*   **OCR Screenshot Scanning**: Uses a **Pytesseract** engine to extract text from payment request screenshots, scanning them for banking fraud triggers, remote desktop installation threats (AnyDesk, QuickSupport), and fake UPI links.
+
+![WhatsApp OCR Analysis](./assets/whatsapp_ocr_analysis_1784739311667.png)
+
+---
+
+### 3. 📷 Counterfeit Currency Computer Vision Check
+*   Checks security features on ₹500 and ₹2000 currency notes using a local webcam feed or native mobile camera.
+*   **2.2:1 Currency Viewfinder**: Aligns the camera frame to standard Indian banknote proportions.
+*   **Central ROI Cropping**: Automatically crops the central 75% width × 55% height Region of Interest (ROI) to eliminate background table/room noise.
+*   **Spatial Feature Analysis**:
+    *   ✅ **Security Thread Shift**: Computes RGB color channel variance ($std(G - R) \ge 4.2$) across metallic thread regions.
+    *   ✅ **Watermark & Intaglio Edge Contrast**: Applies Sobel edge filter analysis ($mean \ge 4.0$, $std \ge 6.5$) to verify Gandhi portrait watermarks and micro-text line density.
+    *   ✅ Intaglio printing latent image presence.
+
+---
+
+### 4. 🕸️ Fraud Graph & Money Laundering Loop Detection
+*   **Visualizer**: Built with `vis-network` to map relationships between victims, transactions, and suspicious bank accounts.
+*   **Loop Finder**: A custom Python **Depth-First Search (DFS)** algorithm running on the backend detects circular laundering routes (e.g., Account A ➔ B ➔ C ➔ A) up to 8 hops deep, flag-marking active mule networks for banks and cyber police.
+*   **Mule Account Registry**: Provides law enforcement with 1-click emergency lien hold signals to freeze compromised bank accounts.
+
+![Fraud Graph analysis](./assets/fraud_graph_analysis_1784739239524.png)
+
+---
+
+### 5. 🗺️ Geospatial Crime Hotspot Map
+*   Displays geographical clustering of reported incidents, active phone spoofing cells (such as Jamtara and Mewat clusters), and local arrests, filtered dynamically by incident type.
 
 ---
 
@@ -71,9 +132,12 @@ flowchart TD
 
 ```
 ET_GENAI/
+├── admin/                      # Vite + React Admin Command Center Dashboard
+├── assets/                     # Architecture & dashboard preview images
 ├── backend/                    # FastAPI Backend Application
 │   ├── main.py                 # Application entrypoint & CORS middleware
 │   ├── requirements.txt        # Python dependencies
+│   ├── db/                     # Database migrations & seed scripts
 │   ├── lib/
 │   │   ├── config.py           # Environment variables configuration
 │   │   ├── groq_client.py      # Groq LLaMA 3.1 & Whisper integration
@@ -130,14 +194,33 @@ pip install -r requirements.txt
 # SUPABASE_URL=your_supabase_url
 # SUPABASE_KEY=your_supabase_key
 
+# Seed initial database records:
+python db/seed.py
+
 # Run FastAPI server
 python main.py
 ```
-The backend server will start at `http://localhost:8000`.
+The backend server will start at `http://localhost:8000`. Interactive Swagger documentation is available at `/docs`.
 
 ---
 
-### 2. Mobile App Setup (React Native Expo)
+### 2. Admin Command Center Setup (React Vite)
+
+```bash
+# Navigate to admin directory
+cd admin
+
+# Install dependencies
+npm install
+
+# Run Vite development server
+npm run dev
+```
+Access the web panel at `http://localhost:5173`.
+
+---
+
+### 3. Mobile App Setup (React Native Expo)
 
 ```bash
 # Navigate to mobile directory
@@ -153,8 +236,25 @@ Scan the QR code using **Expo Go** on Android/iOS or run on an emulator.
 
 ---
 
+## ⚡ Tech Stack Details
+
+*   **API Gateway**: FastAPI (Python)
+*   **Real-time Push**: Supabase Realtime (WebSockets)
+*   **STT Models**: Groq Whisper-large-v3
+*   **LLM Classifier**: Groq Llama-3.1-8b-instant
+*   **OCR Scanning**: Tesseract OCR
+*   **Database**: PostgreSQL (Supabase)
+*   **Frontends**: React (Web), React Native Expo (Mobile)
+
+---
+
 ## 🔒 Security & Privacy Features
 
 - **Local Region-of-Interest Processing**: Camera frames are cropped client-side/backend ROI before processing to strip ambient environment pixels.
 - **RBAC Segmentation**: Role-Based Access Control separates citizen view features from sensitive police administrative analytics.
 - **Fail-Safe Fallbacks**: Local heuristic rules ensure continuous protection even during network latency or API downtime.
+
+---
+
+*Developed for the Economic Times AI Hackathon 2026.*
+*RakshaNet: Digital Public Safety for India.*
